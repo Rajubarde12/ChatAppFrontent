@@ -15,7 +15,7 @@ function App() {
   const isDarkMode = useColorScheme() === 'dark';
   return (
     <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
       <RootNavigator />
     </NavigationContainer>
   );
