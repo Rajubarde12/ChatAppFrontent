@@ -11,7 +11,8 @@
       "@components/*": ["src/components/*"],
       "@assets/*": ["src/assets/*"],
       "@utils/*": ["src/utils/*"],
-      "@RootNavigation": ["src/navigation/RootNavigator"]
+      "@RootNavigation": ["src/navigation/RootNavigator"],
+      "@nativeModules": ["src/nativeModules" ]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

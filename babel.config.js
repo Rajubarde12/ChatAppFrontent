@@ -12,6 +12,7 @@ module.exports = {
           '@assets': './src/assets',
           '@utils': './src/utils',
           '@RootNavigation': './src/navigation/RootNavigator',
+          '@nativeModules': './src/nativeModules',
         },
         extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
       },
