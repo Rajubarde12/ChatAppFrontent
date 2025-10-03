@@ -24,13 +24,7 @@ const ProfileStack: React.FC = () => {
         name="ProfileMain"
         component={ProfileScreen}
         options={{
-          title: 'Profile',
-          headerLeft: () => <HeaderBackButton />,
-          headerRight: () => (
-            <HeaderRightGroup>
-              <HeaderBellButton />
-            </HeaderRightGroup>
-          ),
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

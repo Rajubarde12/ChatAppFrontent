@@ -1,17 +1,60 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import CustomHeader from '@components/CustomHeader';
 
 const ExploreScreen: React.FC = () => {
+  const handleMenuPress = () => {
+    console.log('Menu pressed');
+  };
+
+  const handleBellPress = () => {
+    console.log('Bell pressed');
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Explore</Text>
+    <View style={styles.mainContainer}>
+      <CustomHeader
+        title="Explore"
+        onMenuPress={handleMenuPress}
+        onBellPress={handleBellPress}
+        backgroundColor="#1E40AF"
+        textColor="#FFFFFF"
+      />
+      
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Explore</Text>
+        <Text style={styles.subtitle}>Discover new features and content</Text>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 24, fontWeight: '600' },
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  content: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+  },
 });
 
 export default ExploreScreen;

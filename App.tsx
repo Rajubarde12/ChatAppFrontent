@@ -9,15 +9,18 @@ import React from 'react';
 import 'react-native-gesture-handler';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useColorScheme, StatusBar } from 'react-native';
-import RootNavigator from './src/navigation/RootNavigator';
+import RootNavigator from '@RootNavigation';
+import { ThemeProvider } from './src/contexts/ThemeContext';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   return (
-    <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <RootNavigator />
-    </NavigationContainer>
+    <ThemeProvider>
+      <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <RootNavigator />
+      </NavigationContainer>
+    </ThemeProvider>
   );
 }
 

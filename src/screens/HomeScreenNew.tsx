@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, use } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,23 +17,15 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { GeminiResponse } from 'src/types/geminiResponse';
-import { ChatMessage, MessageAction } from '../types/chat';
-import CustomHeader from '../components/CustomHeader';
-import MessageBubble from '../components/MessageBubble';
-import TypingIndicator from '../components/TypingIndicator';
-import { useTheme } from '../contexts/ThemeContext';
-import {
-  groupMessages,
-  shouldShowAvatar,
-  formatMessageTime,
-} from '../utils/messageGrouping';
-import { LinkInfo } from '../utils/linkDetector';
-import { MMKV } from 'react-native-mmkv';
+import { ChatMessage, MessageAction } from '@types/chat';
+import CustomHeader from '@components/CustomHeader';
+import MessageBubble from '@components/MessageBubble';
+import TypingIndicator from '@components/TypingIndicator';
+import { useTheme } from '@contexts/ThemeContext';
+import { groupMessages, shouldShowAvatar, formatMessageTime } from '@utils/messageGrouping';
+import { LinkInfo } from '@utils/linkDetector';
 
 const HomeScreen: React.FC = () => {
-  const storage = new MMKV({
-    id: 'chatStorage',
-  });
   const navigation = useNavigation();
   const { theme, isDark, toggleTheme } = useTheme();
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -46,7 +38,7 @@ const HomeScreen: React.FC = () => {
     const timer = setTimeout(() => {
       scrollToBottom();
     }, 100);
-
+    
     return () => clearTimeout(timer);
   }, [chatMessages]);
 
@@ -68,7 +60,7 @@ const HomeScreen: React.FC = () => {
   ) => {
     const API_KEY = 'AIzaSyAHfiuc37z2muho_5dTQ_2inqDj1L3bMcQ';
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-
+    
     const requestData = {
       contents: [
         {
@@ -95,14 +87,10 @@ const HomeScreen: React.FC = () => {
 
       const responseData: GeminiResponse = response.data;
       console.log('Gemini Response:', responseData);
-
+      
       if (responseData.candidates && responseData.candidates.length > 0) {
         const candidate = responseData.candidates[0];
-        if (
-          candidate.content &&
-          candidate.content.parts &&
-          candidate.content.parts.length > 0
-        ) {
+        if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
           const text = candidate.content.parts[0].text;
           if (text) {
             onStream(text);
@@ -120,14 +108,7 @@ const HomeScreen: React.FC = () => {
       throw new Error('Failed to get response from the bot.');
     }
   };
-  useEffect(() => {
-    const savedMessages = storage.getString('chatMessages');
-    console.log('thse saved messages are:', savedMessages);
 
-    if (savedMessages) {
-      setChatMessages(JSON.parse(savedMessages));
-    }
-  }, []);
   // Chat send handler
   const handleChatSend = async () => {
     if (chatInput.trim() === '' || isLoading) return;
@@ -146,18 +127,16 @@ const HomeScreen: React.FC = () => {
     setIsGenerating(true);
 
     // Add user message
-    setChatMessages(prev => {
-      storage.set('chatMessages', JSON.stringify([...prev, userMessage]));
-      return [...prev, userMessage];
-    });
-    // storage.set('chatMessages', JSON.stringify([...chatMessages, userMessage]));
+    setChatMessages(prev => [...prev, userMessage]);
 
     // Update user message status to sent
     setTimeout(() => {
-      setChatMessages(prev =>
-        prev.map(msg =>
-          msg.id === userMessage.id ? { ...msg, status: 'sent' as const } : msg,
-        ),
+      setChatMessages(prev => 
+        prev.map(msg => 
+          msg.id === userMessage.id 
+            ? { ...msg, status: 'sent' as const }
+            : msg
+        )
       );
     }, 500);
 
@@ -175,12 +154,10 @@ const HomeScreen: React.FC = () => {
 
       setChatMessages(prev => [...prev, emptyBotMessage]);
 
-      await getBotResponse(currentInput, response => {
+      await getBotResponse(currentInput, (response) => {
         setChatMessages(prev => {
           const updated = [...prev];
-          const botMessageIndex = updated.findIndex(
-            msg => msg.id === botMessageId,
-          );
+          const botMessageIndex = updated.findIndex(msg => msg.id === botMessageId);
           if (botMessageIndex !== -1) {
             updated[botMessageIndex] = {
               ...updated[botMessageIndex],
@@ -189,7 +166,6 @@ const HomeScreen: React.FC = () => {
               status: 'delivered',
             };
           }
-          storage.set('chatMessages', JSON.stringify(updated));
           return updated;
         });
       });
@@ -197,7 +173,7 @@ const HomeScreen: React.FC = () => {
       console.error('Chat error:', err);
       setChatMessages(prev => {
         const updated = [...prev];
-        const lastBotMessage = updated.filter(msg => msg.sender === 'ai').pop();
+        const lastBotMessage = updated.findLast(msg => msg.sender === 'ai');
         if (lastBotMessage) {
           const index = updated.findIndex(msg => msg.id === lastBotMessage.id);
           if (index !== -1) {
@@ -241,20 +217,16 @@ const HomeScreen: React.FC = () => {
       case 'delete':
         Alert.alert('Delete Message', 'Are you sure?', [
           { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              // Handle delete
-            },
-          },
+          { text: 'Delete', style: 'destructive', onPress: () => {
+            // Handle delete
+          }},
         ]);
         break;
     }
   };
 
   const getMessageActions = (message: ChatMessage): MessageAction[] => {
-    const baseActions: MessageAction[] = [
+    return [
       {
         id: 'copy',
         label: message.message,
@@ -269,30 +241,20 @@ const HomeScreen: React.FC = () => {
         action: () => {},
         color: theme.colors.surface,
       },
-    ];
-
-    if (message.sender === 'user') {
-      baseActions.push({
+      ...(message.sender === 'user' ? [{
         id: 'delete',
         label: message.message,
         icon: '🗑️',
         action: () => {},
         color: theme.colors.error,
-      });
-    }
-
-    return baseActions;
+      }] : []),
+    ];
   };
 
   const messageGroups = groupMessages(chatMessages);
 
   return (
-    <View
-      style={[
-        styles.mainContainer,
-        { backgroundColor: theme.colors.background },
-      ]}
-    >
+    <View style={[styles.mainContainer, { backgroundColor: theme.colors.background }]}>
       <CustomHeader
         title="AI Assistant"
         onMenuPress={handleMenuPress}
@@ -300,34 +262,21 @@ const HomeScreen: React.FC = () => {
         backgroundColor={theme.colors.primary}
         textColor={theme.colors.userText}
       />
-
+      
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View
-          style={[
-            styles.container,
-            { backgroundColor: theme.colors.background },
-          ]}
-        >
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
           {/* Welcome Section */}
           {chatMessages.length === 0 && (
-            <View
-              style={[styles.welcomeContainer, { padding: theme.spacing.lg }]}
-            >
+            <View style={[styles.welcomeContainer, { padding: theme.spacing.lg }]}>
               <Text style={[styles.welcomeTitle, { color: theme.colors.text }]}>
                 Welcome to AI Assistant
               </Text>
-              <Text
-                style={[
-                  styles.welcomeSubtitle,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Ask me anything! I'm here to help you with questions, provide
-                information, or just have a conversation.
+              <Text style={[styles.welcomeSubtitle, { color: theme.colors.textSecondary }]}>
+                Ask me anything! I'm here to help you with questions, provide information, or just have a conversation.
               </Text>
             </View>
           )}
@@ -336,12 +285,9 @@ const HomeScreen: React.FC = () => {
           <ScrollView
             style={styles.chatContainer}
             ref={scrollViewRef}
-            // onContentSizeChange={() => scrollToBottom()}
+            onContentSizeChange={() => scrollToBottom()}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.chatContent,
-              { padding: theme.spacing.md },
-            ]}
+            contentContainerStyle={[styles.chatContent, { padding: theme.spacing.md }]}
           >
             {messageGroups.map((group, groupIndex) => (
               <View key={groupIndex}>
@@ -359,7 +305,7 @@ const HomeScreen: React.FC = () => {
                 ))}
               </View>
             ))}
-
+            
             {/* Typing Indicator */}
             {isGenerating && (
               <TypingIndicator
@@ -372,32 +318,19 @@ const HomeScreen: React.FC = () => {
           </ScrollView>
 
           {/* Input Section */}
-          <View
-            style={[
-              styles.inputContainer,
-              {
-                backgroundColor: theme.colors.surface,
-                borderTopColor: theme.colors.border,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.inputWrapper,
-                {
-                  backgroundColor: theme.colors.background,
-                  borderRadius: theme.borderRadius.xl,
-                },
-              ]}
-            >
+          <View style={[styles.inputContainer, { 
+            backgroundColor: theme.colors.surface,
+            borderTopColor: theme.colors.border,
+          }]}>
+            <View style={[styles.inputWrapper, { 
+              backgroundColor: theme.colors.background,
+              borderRadius: theme.borderRadius.xl,
+            }]}>
               <TextInput
-                style={[
-                  styles.textInput,
-                  {
-                    color: theme.colors.text,
-                    fontSize: 16,
-                  },
-                ]}
+                style={[styles.textInput, { 
+                  color: theme.colors.text,
+                  fontSize: 16,
+                }]}
                 placeholder="Type your message here..."
                 placeholderTextColor={theme.colors.textSecondary}
                 value={chatInput}
@@ -413,10 +346,9 @@ const HomeScreen: React.FC = () => {
                 style={[
                   styles.sendButton,
                   {
-                    backgroundColor:
-                      !chatInput.trim() || isLoading
-                        ? theme.colors.border
-                        : theme.colors.primary,
+                    backgroundColor: (!chatInput.trim() || isLoading) 
+                      ? theme.colors.border 
+                      : theme.colors.primary,
                     borderRadius: theme.borderRadius.xl,
                   },
                 ]}
@@ -425,17 +357,9 @@ const HomeScreen: React.FC = () => {
                 accessibilityLabel="Send message"
               >
                 {isLoading ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.userText}
-                  />
+                  <ActivityIndicator size="small" color={theme.colors.userText} />
                 ) : (
-                  <Text
-                    style={[
-                      styles.sendButtonText,
-                      { color: theme.colors.userText },
-                    ]}
-                  >
+                  <Text style={[styles.sendButtonText, { color: theme.colors.userText }]}>
                     Send
                   </Text>
                 )}

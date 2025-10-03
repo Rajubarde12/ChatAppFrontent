@@ -26,26 +26,14 @@ const HomeStack: React.FC = () => {
         name="HomeMain"
         component={HomeScreen}
         options={{
-          title: 'Home',
-          headerLeft: () => <HeaderMenuButton />,
-          headerRight: () => (
-            <HeaderRightGroup>
-              <HeaderBellButton />
-            </HeaderRightGroup>
-          ),
+          headerShown: false,
         }}
       />
       <Stack.Screen
         name="Details"
         component={DetailsScreen}
         options={{
-          title: 'Details',
-          headerLeft: () => <HeaderBackButton />,
-          headerRight: () => (
-            <HeaderRightGroup>
-              <HeaderBellButton />
-            </HeaderRightGroup>
-          ),
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

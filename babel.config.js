@@ -11,6 +11,7 @@ module.exports = {
           '@components': './src/components',
           '@assets': './src/assets',
           '@utils': './src/utils',
+          '@RootNavigation': './src/navigation/RootNavigator',
         },
         extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
       },

@@ -36,6 +36,7 @@ const MainTabs: React.FC = () => {
         name="Explore"
         component={ExploreScreen}
         options={{
+          headerShown: false,
           tabBarLabel: 'Explore',
           tabBarIcon: ({ focused }) => (
             <SearchSvg width={22} height={22} color={focused ? '#1E40AF' : '#9CA3AF'} />

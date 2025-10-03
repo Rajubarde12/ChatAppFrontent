@@ -1,6 +1,8 @@
 {
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
@@ -8,7 +10,8 @@
       "@screens/*": ["src/screens/*"],
       "@components/*": ["src/components/*"],
       "@assets/*": ["src/assets/*"],
-      "@utils/*": ["src/utils/*"]
+      "@utils/*": ["src/utils/*"],
+      "@RootNavigation": ["src/navigation/RootNavigator"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],
