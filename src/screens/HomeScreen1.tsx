@@ -29,17 +29,8 @@ import {
 } from '../utils/messageGrouping';
 import { LinkInfo } from '../utils/linkDetector';
 import { MMKV } from 'react-native-mmkv';
-import {
-  sendMessage,
-  onReceiveMessage,
-  onMessageSent,
-  offReceiveMessage,
-  offMessageSent,
-} from '@utils/socket';
-import { getUserId } from '@utils/storage';
 
-const HomeScreen: React.FC = ({route}) => {
-    const {receiverId,receiverName}=route.params||{};
+const HomeScreen: React.FC = () => {
   const storage = new MMKV({
     id: 'chatStorage',
   });
@@ -65,19 +56,166 @@ const HomeScreen: React.FC = ({route}) => {
     }
   }, []);
 
-  useEffect(() => {
-    // Listen for incoming messages
-    onReceiveMessage(msg => setChatMessages(prev => [...prev, {...msg,id:msg?.sender}]));
+  // Generate unique ID for messages
+  const generateMessageId = () => {
+    return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  };
 
-    // Listen for ack
-    onMessageSent(msg => {setChatMessages(prev => [...prev, {...msg,id:msg?.sender}])});
+  // Gemini API function
+  const getBotResponse = async (
+    userInput: string,
+    onStream: (chunk: string) => void,
+  ) => {
+    const API_KEY = 'AIzaSyAHfiuc37z2muho_5dTQ_2inqDj1L3bMcQ';
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
-    // Cleanup on unmount
-    return () => {
-      offReceiveMessage();
-      offMessageSent();
+    const requestData = {
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: userInput,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1024,
+      },
     };
+
+    try {
+      const response = await axios.post(API_URL, requestData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const responseData: GeminiResponse = response.data;
+      console.log('Gemini Response:', responseData);
+
+      if (responseData.candidates && responseData.candidates.length > 0) {
+        const candidate = responseData.candidates[0];
+        if (
+          candidate.content &&
+          candidate.content.parts &&
+          candidate.content.parts.length > 0
+        ) {
+          const text = candidate.content.parts[0].text;
+          if (text) {
+            onStream(text);
+          } else {
+            onStream('Sorry, I could not generate a response.');
+          }
+        } else {
+          onStream('Sorry, I could not generate a response.');
+        }
+      } else {
+        onStream('Sorry, I could not generate a response.');
+      }
+    } catch (error) {
+      console.error('Gemini API Error:', error);
+      throw new Error('Failed to get response from the bot.');
+    }
+  };
+  useEffect(() => {
+    const savedMessages = storage.getString('chatMessages');
+    console.log('thse saved messages are:', savedMessages);
+
+    if (savedMessages) {
+      setChatMessages(JSON.parse(savedMessages));
+    }
   }, []);
+  // Chat send handler
+  const handleChatSend = async () => {
+    if (chatInput.trim() === '' || isLoading) return;
+
+    const userMessage: ChatMessage = {
+      id: generateMessageId(),
+      sender: 'user',
+      message: chatInput.trim(),
+      timestamp: new Date(),
+      status: 'sending',
+    };
+
+    const currentInput = chatInput.trim();
+    setChatInput('');
+    setIsLoading(true);
+    setIsGenerating(true);
+
+    // Add user message
+    setChatMessages(prev => {
+      storage.set('chatMessages', JSON.stringify([...prev, userMessage]));
+      return [...prev, userMessage];
+    });
+    // storage.set('chatMessages', JSON.stringify([...chatMessages, userMessage]));
+
+    // Update user message status to sent
+    setTimeout(() => {
+      setChatMessages(prev =>
+        prev.map(msg =>
+          msg.id === userMessage.id ? { ...msg, status: 'sent' as const } : msg,
+        ),
+      );
+    }, 500);
+
+    try {
+      // Add empty bot message
+      const botMessageId = generateMessageId();
+      const emptyBotMessage: ChatMessage = {
+        id: botMessageId,
+        sender: 'ai',
+        message: '',
+        timestamp: new Date(),
+        status: 'sending',
+        isTyping: true,
+      };
+
+      setChatMessages(prev => [...prev, emptyBotMessage]);
+
+      await getBotResponse(currentInput, response => {
+        setChatMessages(prev => {
+          const updated = [...prev];
+          const botMessageIndex = updated.findIndex(
+            msg => msg.id === botMessageId,
+          );
+          if (botMessageIndex !== -1) {
+            updated[botMessageIndex] = {
+              ...updated[botMessageIndex],
+              message: response,
+              isTyping: false,
+              status: 'delivered',
+            };
+          }
+          storage.set('chatMessages', JSON.stringify(updated));
+          return updated;
+        });
+      });
+    } catch (err) {
+      console.error('Chat error:', err);
+      setChatMessages(prev => {
+        const updated = [...prev];
+        const lastBotMessage = updated.filter(msg => msg.sender === 'ai').pop();
+        if (lastBotMessage) {
+          const index = updated.findIndex(msg => msg.id === lastBotMessage.id);
+          if (index !== -1) {
+            updated[index] = {
+              ...updated[index],
+              message: 'Failed to get response from the bot.',
+              isTyping: false,
+              status: 'failed',
+            };
+          }
+        }
+        return updated;
+      });
+    } finally {
+      setIsLoading(false);
+      setIsGenerating(false);
+    }
+  };
 
   const handleMenuPress = () => {
     console.log('Menu pressed');
@@ -147,18 +285,6 @@ const HomeScreen: React.FC = ({route}) => {
   };
 
   const messageGroups = groupMessages(chatMessages);
-  const handleChatSend = async () => {
-    const user_id=getUserId()||'';
-    console.log("this is user id from storage",user_id);
-  
-    if (!chatInput.trim()) return;
-    sendMessage({
-      chatId: user_id,
-      receiverId: receiverId||'',    
-      message: chatInput.trim(),
-    });
-    setChatInput('');
-  };
 
   return (
     <View
@@ -223,8 +349,6 @@ const HomeScreen: React.FC = ({route}) => {
                   <MessageBubble
                     key={message.id}
                     message={message}
-                    recever={receiverId}
-                    sender={getUserId()}
                     theme={theme}
                     isGrouped={group.isConsecutive && messageIndex > 0}
                     showAvatar={shouldShowAvatar(group, messageIndex)}

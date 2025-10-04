@@ -23,6 +23,8 @@ interface MessageBubbleProps {
   onLinkPress?: (linkInfo: LinkInfo) => void;
   onActionPress?: (action: MessageAction) => void;
   actions?: MessageAction[];
+  recever:string
+  sender:string
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -35,12 +37,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   onLinkPress,
   onActionPress,
   actions = [],
+  recever,
+  sender
+
 }) => {
   const [showActions, setShowActions] = useState(false);
   const [scaleValue] = useState(new Animated.Value(1));
 
-  const isUser = message.sender === 'user';
-  const isAI = message.sender === 'ai';
+  const isUser = message.sender === sender;
+  const isAI = message.sender === recever;
 
   const formatTime = (date: Date | string | undefined) => {
 

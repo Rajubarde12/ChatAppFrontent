@@ -1,6 +1,8 @@
 export type RootStackParamList = {
   Main: undefined;
   Settings: undefined;
+  LoginScreen: undefined;
+  SplashScreen: undefined;
 };
 
 export type MainTabParamList = {
@@ -13,5 +15,4 @@ export type DrawerParamList = {
   Tabs: undefined;
   About: undefined;
 };
-
 

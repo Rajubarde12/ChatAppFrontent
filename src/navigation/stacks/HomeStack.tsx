@@ -4,10 +4,12 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '@screens/HomeScreen';
 import DetailsScreen from '@screens/DetailsScreen';
 import { HeaderBackButton, HeaderBellButton, HeaderMenuButton, HeaderRightGroup } from '@components/HeaderButtons';
+import UserListScreen from '@screens/UserListScreen';
 
 type HomeStackParamList = {
   HomeMain: undefined;
   Details: { id?: string } | undefined;
+  UserListScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
@@ -15,6 +17,7 @@ const Stack = createNativeStackNavigator<HomeStackParamList>();
 const HomeStack: React.FC = () => {
   return (
     <Stack.Navigator
+    initialRouteName='UserListScreen'
       screenOptions={{
         headerStyle: { backgroundColor: '#1E40AF' },
         headerTintColor: '#fff',
@@ -22,6 +25,10 @@ const HomeStack: React.FC = () => {
         headerShadowVisible: Platform.OS === 'ios',
       }}
     >
+      <Stack.Screen
+      name='UserListScreen'
+        component={UserListScreen}
+      />
       <Stack.Screen
         name="HomeMain"
         component={HomeScreen}

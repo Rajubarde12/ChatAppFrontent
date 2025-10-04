@@ -128,7 +128,7 @@ class MyAudioService : MediaBrowserServiceCompat() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Audio Playback",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             )
             channel.setSound(null, null) // Disable notification sound
             val manager = getSystemService(NotificationManager::class.java)
