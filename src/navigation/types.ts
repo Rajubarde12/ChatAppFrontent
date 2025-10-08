@@ -3,6 +3,7 @@ export type RootStackParamList = {
   Settings: undefined;
   LoginScreen: undefined;
   SplashScreen: undefined;
+  RegistrationScreen: undefined;
 };
 
 export type MainTabParamList = {

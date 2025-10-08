@@ -23,7 +23,7 @@ export const initSocket = (token: string, baseUrl: string) => {
 
 // Emit message to backend
 export const sendMessage = (data: {
-  chatId: string;
+  // chatId: string;
   receiverId: string;
   message: string;
   messageType?: string;
@@ -53,6 +53,16 @@ export const offReceiveMessage = () => {
 export const offMessageSent = () => {
   if (!socket) return;
   socket.off("messageSent");
+};
+export const onUserStatusChanged = (callback: (data: { userId: string; status: "online" | "offline" }) => void) => {
+  if (!socket) throw new Error("Socket not initialized");
+  socket.on("userStatusChanged", callback);
+};
+
+// Remove listener for user status
+export const offUserStatusChanged = () => {
+  if (!socket) return;
+  socket.off("userStatusChanged");
 };
 
 // Get raw socket instance if needed

@@ -17,12 +17,14 @@ const Stack = createNativeStackNavigator<HomeStackParamList>();
 const HomeStack: React.FC = () => {
   return (
     <Stack.Navigator
+
     initialRouteName='UserListScreen'
       screenOptions={{
         headerStyle: { backgroundColor: '#1E40AF' },
         headerTintColor: '#fff',
         headerTitleStyle: { color: '#fff' },
         headerShadowVisible: Platform.OS === 'ios',
+        headerShown:false
       }}
     >
       <Stack.Screen

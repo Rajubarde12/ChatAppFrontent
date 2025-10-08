@@ -35,22 +35,37 @@ import {
   onMessageSent,
   offReceiveMessage,
   offMessageSent,
+  onUserStatusChanged,
+  offUserStatusChanged,
 } from '@utils/socket';
 import { getUserId } from '@utils/storage';
+import { getData } from 'src/api/apiMethods';
+import AppBackground from '@components/AppBackground';
 
-const HomeScreen: React.FC = ({route}) => {
-    const {receiverId,receiverName}=route.params||{};
+const HomeScreen: React.FC = ({ route }) => {
+  const { receiverId, receiverName } = route.params || {};
   const storage = new MMKV({
     id: 'chatStorage',
   });
   const navigation = useNavigation();
   const { theme, isDark, toggleTheme } = useTheme();
+  const [isOnline, setIsOnline] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-
+  useEffect(() => {
+    getData('/users/chats/get/' + receiverId)
+      .then(data => {
+        if (data.status) {
+          setChatMessages(data?.chat || []);
+        }
+      })
+      .catch(err => {
+        console.log('error in fetching chat history', err);
+      });
+  }, [receiverId]);
   useEffect(() => {
     const timer = setTimeout(() => {
       scrollToBottom();
@@ -66,16 +81,28 @@ const HomeScreen: React.FC = ({route}) => {
   }, []);
 
   useEffect(() => {
+    onUserStatusChanged(data => {
+      console.log("thjis is idata",data);
+      
+      setIsOnline(data.userId === receiverId && data.status === 'online');
+    });
     // Listen for incoming messages
-    onReceiveMessage(msg => setChatMessages(prev => [...prev, {...msg,id:msg?.sender}]));
+    onReceiveMessage(msg => {
+      if (msg?.sender === receiverId) {
+        setChatMessages(prev => [...prev, { ...msg, id: msg?.sender }]);
+      }
+    });
 
     // Listen for ack
-    onMessageSent(msg => {setChatMessages(prev => [...prev, {...msg,id:msg?.sender}])});
+    onMessageSent(msg => {
+      setChatMessages(prev => [...prev, { ...msg, id: msg?.sender }]);
+    });
 
     // Cleanup on unmount
     return () => {
       offReceiveMessage();
       offMessageSent();
+      offUserStatusChanged()
     };
   }, []);
 
@@ -148,32 +175,22 @@ const HomeScreen: React.FC = ({route}) => {
 
   const messageGroups = groupMessages(chatMessages);
   const handleChatSend = async () => {
-    const user_id=getUserId()||'';
-    console.log("this is user id from storage",user_id);
-  
+    const user_id = getUserId() || '';
+    console.log('this is user id from storage', user_id);
+
     if (!chatInput.trim()) return;
     sendMessage({
-      chatId: user_id,
-      receiverId: receiverId||'',    
+      receiverId: receiverId || '',
       message: chatInput.trim(),
     });
     setChatInput('');
   };
 
   return (
-    <View
-      style={[
-        styles.mainContainer,
-        { backgroundColor: theme.colors.background },
-      ]}
-    >
-      <CustomHeader
-        title="AI Assistant"
-        onMenuPress={handleMenuPress}
-        onBellPress={handleBellPress}
-        backgroundColor={theme.colors.primary}
-        textColor={theme.colors.userText}
-      />
+    <AppBackground>
+      <CustomHeader title={receiverName}
+      text={isOnline ? 'Online' : 'Offline'}
+       />
 
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
@@ -218,7 +235,7 @@ const HomeScreen: React.FC = ({route}) => {
             ]}
           >
             {messageGroups.map((group, groupIndex) => (
-              <View key={groupIndex}>
+              <View key={groupIndex.toString()}>
                 {group.messages.map((message, messageIndex) => (
                   <MessageBubble
                     key={message.id}
@@ -320,7 +337,7 @@ const HomeScreen: React.FC = ({route}) => {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </AppBackground>
   );
 };
 

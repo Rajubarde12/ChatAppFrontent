@@ -18,43 +18,57 @@ import { RootStackParamList } from '@navigation/types';
 import { RouteProp } from '@react-navigation/native';
 import { showToast } from '@components/CustomToast';
 
-type SplashScreenNavigationProp = NativeStackNavigationProp<
+type RegistrationNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'LoginScreen'
+  'RegistrationScreen'
 >;
 
 type Props = {
-  navigation: SplashScreenNavigationProp;
-  route: RouteProp<RootStackParamList, 'LoginScreen'>;
+  navigation: RegistrationNavigationProp;
+  route: RouteProp<RootStackParamList, 'RegistrationScreen'>;
 };
 
-const LoginScreen: React.FC<Props> = ({ navigation }) => {
+const RegistrationScreen: React.FC<Props> = ({ navigation }) => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {},
-  );
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
 
   const validate = () => {
-    const newErrors: { email?: string; password?: string } = {};
+    const newErrors: typeof errors = {};
+
+    if (!name.trim()) newErrors.name = 'Name is required';
     if (!email.trim()) newErrors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       newErrors.email = 'Invalid email format';
     if (!password.trim()) newErrors.password = 'Password is required';
+    if (!confirmPassword.trim())
+      newErrors.confirmPassword = 'Confirm your password';
+    if (password && confirmPassword && password !== confirmPassword)
+      newErrors.confirmPassword = 'Passwords do not match';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     if (!validate()) return;
 
     setLoading(true);
     try {
-      const res = await axios.post(`${Contstants.MainUrl}/users/login`, {
+      const res = await axios.post(`${Contstants.MainUrl}/users/register`, {
+        name,
         email,
         password,
       });
+
       const token = res.data.token;
       if (!token) throw new Error('Token not received');
 
@@ -62,7 +76,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       setUserId(res.data?._id);
       initSocket(token, Contstants.SocketUrl);
 
-      showToast('Login successful!');
+      showToast('Registration successful!');
       navigation.replace('Main');
     } catch (err: any) {
       console.error(err);
@@ -80,9 +94,15 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.container}
       >
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Login to continue</Text>
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Register to get started</Text>
 
+        <AppInput
+          placeholder="Full Name"
+          value={name}
+          onChangeText={setName}
+          error={errors.name}
+        />
         <AppInput
           placeholder="Email"
           value={email}
@@ -97,16 +117,25 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           secureTextEntry
           error={errors.password}
         />
+        <AppInput
+          placeholder="Confirm Password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+          error={errors.confirmPassword}
+        />
 
-        <AppButton title="Login" onPress={handleLogin} loading={loading} />
-
-        {/* Registration Button / Link */}
+        <AppButton
+          title="Register"
+          onPress={handleRegister}
+          loading={loading}
+        />
         <TouchableOpacity
           style={styles.registerContainer}
           onPress={() => navigation.navigate('RegistrationScreen')}
         >
           <Text style={styles.registerText}>
-            Don't have an account? <Text style={styles.registerLink}>Register</Text>
+            Already have account? <Text style={styles.registerLink}>Login</Text>
           </Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
@@ -114,7 +143,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-export default LoginScreen;
+export default RegistrationScreen;
 
 const styles = StyleSheet.create({
   container: {

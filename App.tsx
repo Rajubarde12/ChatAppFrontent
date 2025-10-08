@@ -15,7 +15,7 @@ import {
 import { useColorScheme, StatusBar } from 'react-native';
 import RootNavigator from '@RootNavigation';
 import { ThemeProvider } from './src/contexts/ThemeContext';
-import { initSocket } from '@utils/socket';
+
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';

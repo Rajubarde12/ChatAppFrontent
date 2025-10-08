@@ -5,6 +5,7 @@ import { initSocket } from "@utils/socket";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "@navigation/types";
+import Contstants from "@utils/Contstants";
 
 
 
@@ -24,7 +25,7 @@ const SplashScreen: React.FC<Props> = ({ navigation }) => {
         
 
         if (token) {
-          initSocket(token, "http://10.0.2.2:5000");
+          initSocket(token, Contstants.SocketUrl);
         }
 
         setTimeout(() => {
