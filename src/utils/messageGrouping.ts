@@ -4,37 +4,41 @@ export const groupMessages = (messages: ChatMessage[]): MessageGroup[] => {
   if (messages.length === 0) return [];
 
   const groups: MessageGroup[] = [];
-  let currentGroup: MessageGroup;
+  let currentGroup: MessageGroup | undefined;
 
   messages.forEach((message, index) => {
-    const msgTimestamp = message.timestamp instanceof Date
-      ? message.timestamp
-      : new Date(message.timestamp);
-  
+    // Ensure timestamp is a Date object
+    const msgTimestamp = message.createdAt instanceof Date 
+      ? message.createdAt 
+      : new Date(message.createdAt);
+
     const isFirstMessage = index === 0;
-    const isSameSender = currentGroup?.sender === message.sender;
-  
-    const groupTimestamp = currentGroup
-      ? currentGroup.timestamp instanceof Date
-        ? currentGroup.timestamp
-        : new Date(currentGroup.timestamp)
-      : null;
-  
-    const timeDiff = groupTimestamp ? msgTimestamp.getTime() - groupTimestamp.getTime() : 0;
-    const isWithinTimeWindow = timeDiff < 5 * 60 * 1000;
-  
+    const isSameSender = currentGroup?.senderId === message.senderId;
+
+    // Calculate time difference
+    let timeDiff = 0;
+    if (currentGroup) {
+      const groupTimestamp = currentGroup.timestamp instanceof Date 
+        ? currentGroup.timestamp 
+        : new Date(currentGroup.timestamp);
+      timeDiff = msgTimestamp.getTime() - groupTimestamp.getTime();
+    }
+
+    const isWithinTimeWindow = timeDiff < 5 * 60 * 1000; // 5 minutes
+
     if (isFirstMessage || !isSameSender || !isWithinTimeWindow) {
       currentGroup = {
-        sender: message.sender,
+        senderId: message.senderId,
         messages: [message],
         timestamp: msgTimestamp,
         isConsecutive: false,
       };
       groups.push(currentGroup);
     } else {
-      currentGroup.messages.push(message);
-      currentGroup.isConsecutive = true;
-      currentGroup.timestamp = msgTimestamp; // update group's timestamp
+      // We know currentGroup exists here because of the conditions above
+      currentGroup?.messages.push(message);
+      currentGroup!.isConsecutive = true;
+      currentGroup!.timestamp = msgTimestamp;
     }
   });
 
@@ -48,16 +52,32 @@ export const shouldShowAvatar = (group: MessageGroup, messageIndex: number): boo
 export const shouldShowTimestamp = (group: MessageGroup, messageIndex: number): boolean => {
   const message = group.messages[messageIndex];
   const isLastMessage = messageIndex === group.messages.length - 1;
-  const timeDiff = isLastMessage 
-    ? Date.now() - message.timestamp.getTime()
-    : group.messages[messageIndex + 1].timestamp.getTime() - message.timestamp.getTime();
+  
+  // Ensure timestamp is a Date object
+  const messageTimestamp = message.createdAt instanceof Date 
+    ? message.createdAt 
+    : new Date(message.createdAt);
+  
+  let timeDiff = 0;
+  
+  if (isLastMessage) {
+    timeDiff = Date.now() - messageTimestamp.getTime();
+  } else {
+    const nextMessage = group.messages[messageIndex + 1];
+    const nextMessageTimestamp = nextMessage.createdAt instanceof Date 
+      ? nextMessage.createdAt 
+      : new Date(nextMessage.createdAt);
+    timeDiff = nextMessageTimestamp.getTime() - messageTimestamp.getTime();
+  }
   
   return isLastMessage || timeDiff > 2 * 60 * 1000; // 2 minutes
 };
 
-export const formatMessageTime = (date: Date): string => {
+export const formatMessageTime = (date: Date | string): string => {
+  // Ensure we have a Date object
+  const messageDate = date instanceof Date ? date : new Date(date);
   const now = new Date();
-  const diff = now.getTime() - date.getTime();
+  const diff = now.getTime() - messageDate.getTime();
   
   // Less than 1 minute
   if (diff < 60 * 1000) {
@@ -77,7 +97,7 @@ export const formatMessageTime = (date: Date): string => {
   }
   
   // More than 24 hours
-  return date.toLocaleDateString([], { 
+  return messageDate.toLocaleDateString([], { 
     month: 'short', 
     day: 'numeric',
     hour: '2-digit',
@@ -86,16 +106,21 @@ export const formatMessageTime = (date: Date): string => {
 };
 
 export const getMessageStatus = (message: ChatMessage): string => {
-  switch (message.status) {
+  // Handle different status property names that might exist
+  const status = (message as any).status || (message as any).messageStatus;
+  
+  switch (status) {
     case 'sending':
       return 'Sending...';
     case 'sent':
       return 'Sent';
     case 'delivered':
       return 'Delivered';
+    case 'read':
+      return 'Read';
     case 'failed':
       return 'Failed to send';
     default:
-      return '';
+      return message.isRead ? 'Read' : 'Delivered';
   }
 };

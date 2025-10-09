@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@navigation/types';
 import { RouteProp } from '@react-navigation/native';
 import { showToast } from '@components/CustomToast';
+import { useLoginMutation } from '../app/features/user/userApi';
 
 type SplashScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -31,11 +32,11 @@ type Props = {
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {},
   );
-
+  const [login, { isLoading, isError, error, data }] = useLoginMutation();
   const validate = () => {
     const newErrors: { email?: string; password?: string } = {};
     if (!email.trim()) newErrors.email = 'Email is required';
@@ -49,28 +50,31 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const handleLogin = async () => {
     if (!validate()) return;
 
-    setLoading(true);
     try {
-      const res = await axios.post(`${Contstants.MainUrl}/users/login`, {
-        email,
-        password,
-      });
-      const token = res.data.token;
-      if (!token) throw new Error('Token not received');
+      const result = await login({ email, password }).unwrap();
 
-      setToken(token);
-      setUserId(res.data?._id);
-      initSocket(token, Contstants.SocketUrl);
+      // ✅ Show message from API if exists
+      if (result.message) {
+        showToast(result.message);
+      } else {
+        showToast('Login successful!');
+      }
 
-      showToast('Login successful!');
       navigation.replace('Main');
     } catch (err: any) {
       console.error(err);
-      showToast(
-        err.response?.data?.message || err?.message || 'Something went wrong',
-      );
-    } finally {
-      setLoading(false);
+
+      // RTK Query errors can be complex, check different shapes
+      let errorMessage = 'Something went wrong';
+
+      if (err.data?.message) {
+        // If backend sent a message
+        errorMessage = err.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      showToast(errorMessage);
     }
   };
 
@@ -98,7 +102,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           error={errors.password}
         />
 
-        <AppButton title="Login" onPress={handleLogin} loading={loading} />
+        <AppButton title="Login" onPress={handleLogin} loading={isLoading} />
 
         {/* Registration Button / Link */}
         <TouchableOpacity
@@ -106,7 +110,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('RegistrationScreen')}
         >
           <Text style={styles.registerText}>
-            Don't have an account? <Text style={styles.registerLink}>Register</Text>
+            Don't have an account?{' '}
+            <Text style={styles.registerLink}>Register</Text>
           </Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>

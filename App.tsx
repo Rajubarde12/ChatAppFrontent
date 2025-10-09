@@ -12,12 +12,14 @@ import {
   DefaultTheme,
   DarkTheme,
 } from '@react-navigation/native';
-import { useColorScheme, StatusBar } from 'react-native';
+import { useColorScheme, StatusBar, LogBox } from 'react-native';
 import RootNavigator from '@RootNavigation';
 import { ThemeProvider } from './src/contexts/ThemeContext';
-
+import { Provider } from 'react-redux';
+import { store } from 'src/app/store';
 
 function App() {
+  LogBox.ignoreAllLogs(true);
   const isDarkMode = useColorScheme() === 'dark';
   // useEffect(() => {
   //   initSocket(
@@ -29,7 +31,9 @@ function App() {
     <ThemeProvider>
       <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
-        <RootNavigator />
+        <Provider store={store}>
+          <RootNavigator />
+        </Provider>
       </NavigationContainer>
     </ThemeProvider>
   );

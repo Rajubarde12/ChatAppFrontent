@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@navigation/types';
 import { RouteProp } from '@react-navigation/native';
 import { showToast } from '@components/CustomToast';
+import { useRegisterMutation } from 'src/app/features/user/userApi';
 
 type RegistrationNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -33,15 +34,16 @@ const RegistrationScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
-  }>({});
+  }>({});   
+  const [register, { isLoading, isError, error, data }] = useRegisterMutation();
 
   const validate = () => {
+  
     const newErrors: typeof errors = {};
 
     if (!name.trim()) newErrors.name = 'Name is required';
@@ -61,22 +63,18 @@ const RegistrationScreen: React.FC<Props> = ({ navigation }) => {
   const handleRegister = async () => {
     if (!validate()) return;
 
-    setLoading(true);
+
     try {
-      const res = await axios.post(`${Contstants.MainUrl}/users/register`, {
-        name,
-        email,
-        password,
-      });
+      const result = await register({ name, email, password }).unwrap();
 
-      const token = res.data.token;
-      if (!token) throw new Error('Token not received');
+      // ✅ Show message from API if exists
+      if (result.message) {
+        showToast(result.message);
+      } else {
+        showToast('Registration successful!');
+      }
 
-      setToken(token);
-      setUserId(res.data?._id);
-      initSocket(token, Contstants.SocketUrl);
-
-      showToast('Registration successful!');
+      // Navigate to main app screen  
       navigation.replace('Main');
     } catch (err: any) {
       console.error(err);
@@ -84,7 +82,7 @@ const RegistrationScreen: React.FC<Props> = ({ navigation }) => {
         err.response?.data?.message || err?.message || 'Something went wrong',
       );
     } finally {
-      setLoading(false);
+      
     }
   };
 
@@ -128,7 +126,7 @@ const RegistrationScreen: React.FC<Props> = ({ navigation }) => {
         <AppButton
           title="Register"
           onPress={handleRegister}
-          loading={loading}
+          loading={isLoading}
         />
         <TouchableOpacity
           style={styles.registerContainer}

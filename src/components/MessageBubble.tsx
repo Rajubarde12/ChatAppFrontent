@@ -23,8 +23,8 @@ interface MessageBubbleProps {
   onLinkPress?: (linkInfo: LinkInfo) => void;
   onActionPress?: (action: MessageAction) => void;
   actions?: MessageAction[];
-  recever:string
-  sender:string
+  recever:number
+  sender:number
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -44,8 +44,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [showActions, setShowActions] = useState(false);
   const [scaleValue] = useState(new Animated.Value(1));
 
-  const isUser = message.sender === sender;
-  const isAI = message.sender === recever;
+  const isUser = message.receiverId === recever;
+  const isAI = message.senderId === sender;
 
   const formatTime = (date: Date | string | undefined) => {
 
@@ -187,7 +187,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     >
       {showAvatar && !isGrouped && (
         <Avatar
-          sender={message.sender}
+          sender={message.senderId === sender ? 'user' : 'ai'}
           size="small"
           theme={theme}
           showOnlineStatus={isUser}
@@ -227,9 +227,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {message.attachments && message.attachments.length > 0 && (
           <View style={styles.attachments}>
-            {message.attachments.map((attachment) => (
-              <Text key={attachment.id} style={[textStyle, { fontStyle: 'italic' }]}>
-                📎 {attachment.name}
+            {message.attachments.map((attachment:string,index) => (
+              <Text key={index.toString()} style={[textStyle, { fontStyle: 'italic' }]}>
+                📎 {attachment}
               </Text>
             ))}
           </View>
@@ -237,7 +237,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         <View style={[styles.footer, { flexDirection: isUser ? 'row-reverse' : 'row' }]}>
           <Text style={timeStyle}>
-            {formatTime(message.timestamp)}
+            {formatTime(message.createdAt)}
           </Text>
           
           {isUser && (
@@ -247,40 +247,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           )}
         </View>
 
-        {message.reactions && message.reactions.length > 0 && (
-          <View style={[styles.reactions, { flexDirection: isUser ? 'row-reverse' : 'row' }]}>
-            {message.reactions.map((reaction, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.reaction,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderRadius: theme.borderRadius.sm,
-                    paddingHorizontal: theme.spacing.xs,
-                    paddingVertical: 2,
-                    marginHorizontal: 2,
-                  },
-                ]}
-                onPress={() => {
-                  // Handle reaction press
-                }}
-              >
-                <Text style={[styles.reactionText, { color: theme.colors.text }]}>
-                  {reaction.emoji} {reaction.count}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {message.isTyping && (
-          <View style={styles.typingContainer}>
-            <Text style={[textStyle, { opacity: 0.7 }]}>
-              <Text style={styles.typingDots}>●●●</Text>
-            </Text>
-          </View>
-        )}
+      
       </TouchableOpacity>
 
       {showActions && actions.length > 0 && (

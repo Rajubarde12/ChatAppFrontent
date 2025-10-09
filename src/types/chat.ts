@@ -1,18 +1,21 @@
 export interface ChatMessage {
-  id: string;
-  sender: 'user' | 'ai';
+  id: number;
+  senderId: number;
+  receiverId: number;
   message: string;
-  timestamp: Date;
-  status: 'sending' | 'sent' | 'delivered' | 'failed';
-  isTyping?: boolean;
-  reactions?: MessageReaction[];
-  replyTo?: string; // ID of message being replied to
-  attachments?: MessageAttachment[];
-  metadata?: {
-    model?: string;
-    tokens?: number;
-    processingTime?: number;
-  };
+  messageType: 'text' | 'image' | 'file' | 'audio';
+  attachments?: string[];
+  isRead: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed'; // Optional status field
+}
+
+export interface MessageGroup {
+  senderId: number;
+  messages: ChatMessage[];
+  timestamp: Date | string;
+  isConsecutive: boolean;
 }
 
 export interface MessageReaction {
@@ -30,12 +33,6 @@ export interface MessageAttachment {
   mimeType?: string;
 }
 
-export interface MessageGroup {
-  sender: 'user' | 'ai';
-  messages: ChatMessage[];
-  timestamp: Date;
-  isConsecutive: boolean;
-}
 
 export interface ChatTheme {
   name: string;

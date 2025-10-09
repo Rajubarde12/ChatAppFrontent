@@ -7,50 +7,43 @@ import {
   ActivityIndicator,
   StyleSheet,
   Image,
+  Alert,
 } from 'react-native';
 import axios from 'axios';
 import { getToken } from '@utils/storage';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import Contstants from '@utils/Contstants';
 import AppBackground from '@components/AppBackground';
 import CustomHeader from '@components/CustomHeader';
-
-interface IUser {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatar?: string;
-  isActive: boolean;
-}
+import { ChatMessage } from 'src/types/chat';
+import { IUser } from 'src/types/user';
+import { useFetchUsersQuery } from 'src/app/features/user/userApi';
+import { offReceiveMessage, onReceiveMessage } from '@utils/socket';
 
 export default function UserListScreen() {
-  const [users, setUsers] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<any>();
+  const { data, isLoading, isError, refetch } = useFetchUsersQuery();
+const focused=useIsFocused()
+useEffect(() => {
+  // Refetch whenever a new message is received
+  const unsubscribe = onReceiveMessage((msg) => {
+    refetch(); // update Users list or Chat list
+  });
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  // Also refetch when the screen becomes focused
+  if (focused) {
+    refetch();
+  }
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const token = getToken();
-      const res = await axios.get(`${Contstants.MainUrl}/users/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUsers(res.data.users);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-    } finally {
-      setLoading(false);
-    }
+  return () => {
+    offReceiveMessage(); // clean up listener
   };
+}, [focused]);
 
   const handleUserPress = (user: IUser) => {
     navigation.navigate('HomeMain', {
-      receiverId: user._id,
+      receiverId: user.id,
       receiverName: user.name,
     });
   };
@@ -70,12 +63,11 @@ export default function UserListScreen() {
 
   return (
     <AppBackground>
-        <CustomHeader title="Users" showBackButton={false} />
+      <CustomHeader title="Users" showBackButton={false} text={''} />
       <View style={styles.container}>
-      
         <FlatList
-          data={users}
-          keyExtractor={item => item._id}
+          data={data?.users}
+          keyExtractor={item => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.row}
@@ -92,8 +84,23 @@ export default function UserListScreen() {
               )}
               <View style={styles.userInfo}>
                 <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.email}>{item.email}</Text>
+                <Text style={styles.email}>{item.lastMessage?.message}</Text>
               </View>
+              {item.unreadCount > 0 && (
+                <View
+                  style={{
+                    backgroundColor: 'red',
+                    borderRadius: 12,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    marginLeft: 'auto',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>
+                    {item.unreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           )}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}

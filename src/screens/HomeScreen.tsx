@@ -14,7 +14,7 @@ import {
   Share,
   Clipboard,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { GeminiResponse } from 'src/types/geminiResponse';
 import { ChatMessage, MessageAction } from '../types/chat';
@@ -41,31 +41,47 @@ import {
 import { getUserId } from '@utils/storage';
 import { getData } from 'src/api/apiMethods';
 import AppBackground from '@components/AppBackground';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { HomeStackParamList } from '@navigation/stacks/HomeStack';
+import { RootStackParamList } from '@navigation/types';
+import {
+  useChatReadStatusQuery,
+  useFetchuserchatQuery,
+} from 'src/app/features/user/userApi';
+type HomeScreenNavigationProp = NativeStackNavigationProp<
+  HomeStackParamList,
+  'HomeMain'
+>;
 
-const HomeScreen: React.FC = ({ route }) => {
+type Props = {
+  navigation: HomeScreenNavigationProp;
+  route: RouteProp<HomeStackParamList, 'HomeMain'>;
+};
+
+const HomeScreen: React.FC<Props> = ({ route }) => {
   const { receiverId, receiverName } = route.params || {};
-  const storage = new MMKV({
-    id: 'chatStorage',
-  });
+
+  const { data, isLoading, refetch } = useFetchuserchatQuery(
+    Number(receiverId),
+  );
+ const {data:readdara}= useChatReadStatusQuery(Number(receiverId));
+ console.log("this is updated",readdara);
+ 
+
+ 
   const navigation = useNavigation();
   const { theme, isDark, toggleTheme } = useTheme();
   const [isOnline, setIsOnline] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   useEffect(() => {
-    getData('/users/chats/get/' + receiverId)
-      .then(data => {
-        if (data.status) {
-          setChatMessages(data?.chat || []);
-        }
-      })
-      .catch(err => {
-        console.log('error in fetching chat history', err);
-      });
-  }, [receiverId]);
+    setChatMessages(data?.messages || []);
+    refetch();
+  }, [data]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       scrollToBottom();
@@ -82,27 +98,24 @@ const HomeScreen: React.FC = ({ route }) => {
 
   useEffect(() => {
     onUserStatusChanged(data => {
-      console.log("thjis is idata",data);
-      
       setIsOnline(data.userId === receiverId && data.status === 'online');
     });
-    // Listen for incoming messages
     onReceiveMessage(msg => {
-      if (msg?.sender === receiverId) {
-        setChatMessages(prev => [...prev, { ...msg, id: msg?.sender }]);
+      if (msg?.senderId === receiverId) {
+        setChatMessages(prev => [...prev, { ...msg }]);
       }
     });
 
     // Listen for ack
     onMessageSent(msg => {
-      setChatMessages(prev => [...prev, { ...msg, id: msg?.sender }]);
+      setChatMessages(prev => [...prev, { ...msg }]);
     });
 
     // Cleanup on unmount
     return () => {
       offReceiveMessage();
       offMessageSent();
-      offUserStatusChanged()
+      offUserStatusChanged();
     };
   }, []);
 
@@ -160,7 +173,7 @@ const HomeScreen: React.FC = ({ route }) => {
       },
     ];
 
-    if (message.sender === 'user') {
+    if (message.senderId.toString() === getUserId()) {
       baseActions.push({
         id: 'delete',
         label: message.message,
@@ -176,8 +189,6 @@ const HomeScreen: React.FC = ({ route }) => {
   const messageGroups = groupMessages(chatMessages);
   const handleChatSend = async () => {
     const user_id = getUserId() || '';
-    console.log('this is user id from storage', user_id);
-
     if (!chatInput.trim()) return;
     sendMessage({
       receiverId: receiverId || '',
@@ -188,9 +199,10 @@ const HomeScreen: React.FC = ({ route }) => {
 
   return (
     <AppBackground>
-      <CustomHeader title={receiverName}
-      text={isOnline ? 'Online' : 'Offline'}
-       />
+      <CustomHeader
+        title={receiverName}
+        text={isOnline ? 'Online' : 'Offline'}
+      />
 
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
@@ -240,8 +252,8 @@ const HomeScreen: React.FC = ({ route }) => {
                   <MessageBubble
                     key={message.id}
                     message={message}
-                    recever={receiverId}
-                    sender={getUserId()}
+                    recever={Number(receiverId)}
+                    sender={Number(getUserId())}
                     theme={theme}
                     isGrouped={group.isConsecutive && messageIndex > 0}
                     showAvatar={shouldShowAvatar(group, messageIndex)}
