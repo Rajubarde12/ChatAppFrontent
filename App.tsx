@@ -17,6 +17,7 @@ import RootNavigator from '@RootNavigation';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { Provider } from 'react-redux';
 import { store } from 'src/app/store';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function App() {
   LogBox.ignoreAllLogs(true);
@@ -28,14 +29,19 @@ function App() {
   //   );
   // }, []);
   return (
-    <ThemeProvider>
-      <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
-        <StatusBar barStyle="light-content" backgroundColor="#000" />
-        <Provider store={store}>
-          <RootNavigator />
-        </Provider>
-      </NavigationContainer>
-    </ThemeProvider>
+   
+      <SafeAreaView  style={{ flex: 1,backgroundColor:"#000"}}>
+       <StatusBar barStyle={"dark-content"}/>
+        <ThemeProvider>
+          <NavigationContainer >
+            <Provider store={store}>
+              <RootNavigator />
+            </Provider>
+          </NavigationContainer>
+        </ThemeProvider>
+      
+      </SafeAreaView>
+  
   );
 }
 

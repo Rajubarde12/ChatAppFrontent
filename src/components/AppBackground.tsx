@@ -1,29 +1,30 @@
-import React, { ReactNode } from 'react';
-import { StyleSheet, Dimensions, View } from 'react-native';
+import React from 'react';
+import { ImageBackground, StyleSheet, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { BlurView } from '@react-native-community/blur';
 
-const { width, height } = Dimensions.get('window');
-
-interface ModernBackgroundProps {
-  children: ReactNode;
+interface AppBackgroundProps {
+  children?: React.ReactNode;
 }
 
-const AppBackground: React.FC<ModernBackgroundProps> = ({ children }) => {
+const AppBackground: React.FC<AppBackgroundProps> = ({ children }) => {
   return (
-  <LinearGradient
-        colors={["#0f2027", "#203a43", "#2c5364"]}
-        style={styles.container}
-      >
-    {children}
-    </LinearGradient>
+    <View style={styles.wrapper}>
+      {/* 3️⃣ Actual content above everything */}
+      <View style={styles.content}>{children}</View>
+    </View>
   );
 };
 
-export default AppBackground;
-
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     flex: 1,
+    backgroundColor: '#6e8e9cff',
   },
- 
+  content: {
+    flex: 1,
+    zIndex: 10,
+  },
 });
+
+export default AppBackground;

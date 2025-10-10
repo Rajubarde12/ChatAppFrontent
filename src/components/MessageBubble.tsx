@@ -185,15 +185,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         },
       ]}
     >
-      {showAvatar && !isGrouped && (
-        <Avatar
-          sender={message.senderId === sender ? 'user' : 'ai'}
-          size="small"
-          theme={theme}
-          showOnlineStatus={isUser}
-          isOnline={isUser}
-        />
-      )}
+     
       
       {showAvatar && isGrouped && (
         <View style={{ width: 24 }} />
@@ -236,15 +228,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         <View style={[styles.footer, { flexDirection: isUser ? 'row-reverse' : 'row' }]}>
-          <Text style={timeStyle}>
+          <Text style={[timeStyle,{marginLeft:2}]}>
             {formatTime(message.createdAt)}
           </Text>
           
-          {isUser && (
-            <Text style={[timeStyle, { marginLeft: theme.spacing.xs }]}>
-              {getStatusIcon()}
-            </Text>
-          )}
+         <Text style={timeStyle}>{message.isRead?"read":'unred'}</Text>
+         
+       
         </View>
 
       
@@ -295,7 +285,7 @@ const styles = StyleSheet.create({
     // Styles applied dynamically
   },
   footer: {
-    marginTop: 4,
+    marginTop: 1,
   },
   attachments: {
     marginTop: 8,

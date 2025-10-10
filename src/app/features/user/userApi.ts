@@ -2,6 +2,7 @@ import { IUser } from 'src/types/user';
 import { api } from '../../api';
 import { setCredentials } from '../auth/authSlice';
 import { ChatMessage } from 'src/types/chat';
+import { userStatustype } from '@utils/socket';
 
 interface LoginRequest {
   email: string;
@@ -47,6 +48,11 @@ export interface ChatRespones {
   chat:Chat;
   messages: ChatMessage[]; // optional, if you include chat messages
   unreadCount?: number;
+}
+export interface userStatusResponseType{
+  message:string,
+  status:true|false
+  data:userStatustype
 }
 
 
@@ -108,9 +114,16 @@ export const authApi = api.injectEndpoints({
             method:'GET'
         }),
         providesTags:["Chat"]
+    }),
+    getUserStatus:builder.query<userStatusResponseType,number>({
+        query:(userId)=>({
+            url:`users/userStatus/${userId}`,
+            method:'GET'
+        }),
+        providesTags:["Chat"]
     })
   }),
   
 });
 
-export const { useLoginMutation, useRegisterMutation, useFetchUsersQuery,useFetchuserchatQuery ,useChatReadStatusQuery} = authApi;
+export const { useLoginMutation, useRegisterMutation, useFetchUsersQuery,useFetchuserchatQuery ,useChatReadStatusQuery,useGetUserStatusQuery} = authApi;

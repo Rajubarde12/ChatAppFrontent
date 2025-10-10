@@ -2,7 +2,6 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ProfileScreen from '@screens/ProfileScreen';
-import { HeaderBackButton, HeaderBellButton, HeaderRightGroup } from '@components/HeaderButtons';
 
 type ProfileStackParamList = {
   ProfileMain: undefined;

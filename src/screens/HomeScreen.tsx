@@ -14,7 +14,7 @@ import {
   Share,
   Clipboard,
 } from 'react-native';
-import { RouteProp, useNavigation } from '@react-navigation/native';
+import { RouteProp, useIsFocused, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { GeminiResponse } from 'src/types/geminiResponse';
 import { ChatMessage, MessageAction } from '../types/chat';
@@ -37,6 +37,7 @@ import {
   offMessageSent,
   onUserStatusChanged,
   offUserStatusChanged,
+  userStatustype,
 } from '@utils/socket';
 import { getUserId } from '@utils/storage';
 import { getData } from 'src/api/apiMethods';
@@ -47,7 +48,9 @@ import { RootStackParamList } from '@navigation/types';
 import {
   useChatReadStatusQuery,
   useFetchuserchatQuery,
+  useGetUserStatusQuery,
 } from 'src/app/features/user/userApi';
+import ChatHeader from '@components/ChatHeader';
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   HomeStackParamList,
   'HomeMain'
@@ -64,14 +67,19 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
   const { data, isLoading, refetch } = useFetchuserchatQuery(
     Number(receiverId),
   );
- const {data:readdara}= useChatReadStatusQuery(Number(receiverId));
- console.log("this is updated",readdara);
- 
+  const { data: readdara,refetch:updateReadeStatus } = useChatReadStatusQuery(Number(receiverId));
+  
+  
+  const { data: userStatusData,refetch:fetchUserStatus } = useGetUserStatusQuery(Number(receiverId));
 
- 
+  
+useEffect(()=>{
+ setIsOnline(userStatusData?.data)
+},[userStatusData])
+
   const navigation = useNavigation();
   const { theme, isDark, toggleTheme } = useTheme();
-  const [isOnline, setIsOnline] = useState(false);
+  const [isOnline, setIsOnline] = useState<userStatustype>();
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   // const [isLoading, setIsLoading] = useState(false);
@@ -80,6 +88,7 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
   useEffect(() => {
     setChatMessages(data?.messages || []);
     refetch();
+    fetchUserStatus()
   }, [data]);
 
   useEffect(() => {
@@ -95,13 +104,18 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
       scrollViewRef.current.scrollToEnd({ animated: true });
     }
   }, []);
+  const focused=useIsFocused()
 
   useEffect(() => {
     onUserStatusChanged(data => {
-      setIsOnline(data.userId === receiverId && data.status === 'online');
+      if(data.userId==receiverId){
+        setIsOnline(data)
+      }
+   
     });
-    onReceiveMessage(msg => {
+    onReceiveMessage(msg => {  
       if (msg?.senderId === receiverId) {
+        updateReadeStatus()
         setChatMessages(prev => [...prev, { ...msg }]);
       }
     });
@@ -117,15 +131,8 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
       offMessageSent();
       offUserStatusChanged();
     };
-  }, []);
+  }, [focused]);
 
-  const handleMenuPress = () => {
-    console.log('Menu pressed');
-  };
-
-  const handleBellPress = () => {
-    console.log('Bell pressed');
-  };
 
   const handleLinkPress = (linkInfo: LinkInfo) => {
     console.log('Link pressed:', linkInfo);
@@ -198,158 +205,123 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
   };
 
   return (
-    <AppBackground>
-      <CustomHeader
-        title={receiverName}
-        text={isOnline ? 'Online' : 'Offline'}
-      />
-
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
-        <View
-          style={[
-            styles.container,
-            { backgroundColor: theme.colors.background },
-          ]}
+    <View style={{ flex: 1 }}>
+      <ChatHeader userStatus={isOnline} title={receiverName} text={isOnline ? 'Online' : 'Offline'} />
+      <AppBackground>
+        <KeyboardAvoidingView
+          style={styles.keyboardContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
-          {/* Welcome Section */}
-          {chatMessages.length === 0 && (
-            <View
-              style={[styles.welcomeContainer, { padding: theme.spacing.lg }]}
-            >
-              <Text style={[styles.welcomeTitle, { color: theme.colors.text }]}>
-                Welcome to AI Assistant
-              </Text>
-              <Text
-                style={[
-                  styles.welcomeSubtitle,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Ask me anything! I'm here to help you with questions, provide
-                information, or just have a conversation.
-              </Text>
-            </View>
-          )}
-
-          {/* Chat Messages */}
-          <ScrollView
-            style={styles.chatContainer}
-            ref={scrollViewRef}
-            // onContentSizeChange={() => scrollToBottom()}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.chatContent,
-              { padding: theme.spacing.md },
-            ]}
-          >
-            {messageGroups.map((group, groupIndex) => (
-              <View key={groupIndex.toString()}>
-                {group.messages.map((message, messageIndex) => (
-                  <MessageBubble
-                    key={message.id}
-                    message={message}
-                    recever={Number(receiverId)}
-                    sender={Number(getUserId())}
-                    theme={theme}
-                    isGrouped={group.isConsecutive && messageIndex > 0}
-                    showAvatar={shouldShowAvatar(group, messageIndex)}
-                    onLinkPress={handleLinkPress}
-                    onActionPress={handleMessageAction}
-                    actions={getMessageActions(message)}
-                  />
-                ))}
-              </View>
-            ))}
-
-            {/* Typing Indicator */}
-            {isGenerating && (
-              <TypingIndicator
-                theme={theme}
-                isVisible={isGenerating}
-                text="AI is thinking..."
-                sender="ai"
-              />
-            )}
-          </ScrollView>
-
-          {/* Input Section */}
-          <View
-            style={[
-              styles.inputContainer,
-              {
-                backgroundColor: theme.colors.surface,
-                borderTopColor: theme.colors.border,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.inputWrapper,
-                {
-                  backgroundColor: theme.colors.background,
-                  borderRadius: theme.borderRadius.xl,
-                },
+          <View style={[styles.container]}>
+            {/* Chat Messages */}
+            <ScrollView
+              style={styles.chatContainer}
+              ref={scrollViewRef}
+              // onContentSizeChange={() => scrollToBottom()}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.chatContent,
+                { padding: theme.spacing.md },
               ]}
             >
-              <TextInput
+              {messageGroups.map((group, groupIndex) => (
+                <View key={groupIndex.toString()}>
+                  {group.messages.map((message, messageIndex) => (
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      recever={Number(receiverId)}
+                      sender={Number(getUserId())}
+                      theme={theme}
+                      isGrouped={group.isConsecutive && messageIndex > 0}
+                      showAvatar={shouldShowAvatar(group, messageIndex)}
+                      onLinkPress={handleLinkPress}
+                      onActionPress={handleMessageAction}
+                      actions={getMessageActions(message)}
+                    />
+                  ))}
+                </View>
+              ))}
+
+              {/* Typing Indicator */}
+              {isGenerating && (
+                <TypingIndicator
+                  theme={theme}
+                  isVisible={isGenerating}
+                  text="AI is thinking..."
+                  sender="ai"
+                />
+              )}
+            </ScrollView>
+
+            {/* Input Section */}
+            <View style={[styles.inputContainer]}>
+              <View
                 style={[
-                  styles.textInput,
+                  styles.inputWrapper,
                   {
-                    color: theme.colors.text,
-                    fontSize: 16,
-                  },
-                ]}
-                placeholder="Type your message here..."
-                placeholderTextColor={theme.colors.textSecondary}
-                value={chatInput}
-                onChangeText={setChatInput}
-                onSubmitEditing={handleChatSend}
-                returnKeyType="send"
-                editable={!isLoading}
-                multiline
-                maxLength={1000}
-              />
-              <TouchableOpacity
-                onPress={handleChatSend}
-                style={[
-                  styles.sendButton,
-                  {
-                    backgroundColor:
-                      !chatInput.trim() || isLoading
-                        ? theme.colors.border
-                        : theme.colors.primary,
+                    backgroundColor: theme.colors.background,
                     borderRadius: theme.borderRadius.xl,
                   },
                 ]}
-                disabled={!chatInput.trim() || isLoading}
-                accessibilityRole="button"
-                accessibilityLabel="Send message"
               >
-                {isLoading ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.userText}
-                  />
-                ) : (
-                  <Text
-                    style={[
-                      styles.sendButtonText,
-                      { color: theme.colors.userText },
-                    ]}
-                  >
-                    Send
-                  </Text>
-                )}
-              </TouchableOpacity>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    {
+                      color: theme.colors.text,
+                      fontSize: 16,
+                    },
+                  ]}
+                  placeholder="Type your message here..."
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={chatInput}
+                  onChangeText={setChatInput}
+                  onSubmitEditing={handleChatSend}
+                  returnKeyType="send"
+                  editable={!isLoading}
+                  multiline
+                  maxLength={1000}
+                />
+                <TouchableOpacity
+                  onPress={handleChatSend}
+                  style={[
+                    styles.sendButton,
+                    {
+                      backgroundColor:
+                        !chatInput.trim() || isLoading
+                          ? theme.colors.border
+                          : theme.colors.primary,
+                      borderRadius: theme.borderRadius.xl,
+                    },
+                  ]}
+                  disabled={!chatInput.trim() || isLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send message"
+                >
+                  {isLoading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.colors.userText}
+                    />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.sendButtonText,
+                        { color: theme.colors.userText },
+                      ]}
+                    >
+                      Send
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
-    </AppBackground>
+        </KeyboardAvoidingView>
+      </AppBackground>
+    </View>
   );
 };
 

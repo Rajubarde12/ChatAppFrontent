@@ -3,12 +3,7 @@ import { Platform } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '@screens/HomeScreen';
 import DetailsScreen from '@screens/DetailsScreen';
-import {
-  HeaderBackButton,
-  HeaderBellButton,
-  HeaderMenuButton,
-  HeaderRightGroup,
-} from '@components/HeaderButtons';
+
 import UserListScreen from '@screens/UserListScreen';
 
 export type HomeStackParamList = {

@@ -16,9 +16,8 @@ const MainTabs: React.FC = () => {
       screenOptions={{
         tabBarActiveTintColor: '#1E40AF',
         tabBarInactiveTintColor: '#9CA3AF',
-        headerStyle: { backgroundColor: '#1E40AF' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { color: '#fff' },
+      
+      
       }}
     >
       <Tab.Screen
