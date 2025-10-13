@@ -24,22 +24,22 @@ export default function UserListScreen() {
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<any>();
   const { data, isLoading, isError, refetch } = useFetchUsersQuery();
-const focused=useIsFocused()
-useEffect(() => {
-  // Refetch whenever a new message is received
-  const unsubscribe = onReceiveMessage((msg) => {
-    refetch(); // update Users list or Chat list
-  });
+  const focused = useIsFocused();
+  useEffect(() => {
+    // Refetch whenever a new message is received
+    const unsubscribe = onReceiveMessage(msg => {
+      refetch(); // update Users list or Chat list
+    });
 
-  // Also refetch when the screen becomes focused
-  if (focused) {
-    refetch();
-  }
+    // Also refetch when the screen becomes focused
+    if (focused) {
+      refetch();
+    }
 
-  return () => {
-    offReceiveMessage(); // clean up listener
-  };
-}, [focused]);
+    return () => {
+      offReceiveMessage(); // clean up listener
+    };
+  }, [focused]);
 
   const handleUserPress = (user: IUser) => {
     navigation.navigate('HomeMain', {
@@ -73,8 +73,12 @@ useEffect(() => {
               style={styles.row}
               onPress={() => handleUserPress(item)}
             >
+              
               {item.avatar ? (
-                <Image source={{ uri: item.avatar }} style={styles.avatar} />
+                <Image
+                  source={{ uri: `${Contstants.MediaUrl}/${item.avatar}` }}
+                  style={styles.avatar}
+                />
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Text style={styles.avatarText}>
@@ -83,6 +87,7 @@ useEffect(() => {
                 </View>
               )}
               <View style={styles.userInfo}>
+                
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.email}>{item.lastMessage?.message}</Text>
               </View>

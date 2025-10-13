@@ -14,7 +14,11 @@ import {
   Share,
   Clipboard,
 } from 'react-native';
-import { RouteProp, useIsFocused, useNavigation } from '@react-navigation/native';
+import {
+  RouteProp,
+  useIsFocused,
+  useNavigation,
+} from '@react-navigation/native';
 import axios from 'axios';
 import { GeminiResponse } from 'src/types/geminiResponse';
 import { ChatMessage, MessageAction } from '../types/chat';
@@ -38,6 +42,9 @@ import {
   onUserStatusChanged,
   offUserStatusChanged,
   userStatustype,
+  updateSendertoMessageReaded,
+  onGetReadeMessagesid,
+  offGetReadMessagesId,
 } from '@utils/socket';
 import { getUserId } from '@utils/storage';
 import { getData } from 'src/api/apiMethods';
@@ -46,7 +53,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '@navigation/stacks/HomeStack';
 import { RootStackParamList } from '@navigation/types';
 import {
-  useChatReadStatusQuery,
   useFetchuserchatQuery,
   useGetUserStatusQuery,
 } from 'src/app/features/user/userApi';
@@ -67,15 +73,13 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
   const { data, isLoading, refetch } = useFetchuserchatQuery(
     Number(receiverId),
   );
-  const { data: readdara,refetch:updateReadeStatus } = useChatReadStatusQuery(Number(receiverId));
-  
-  
-  const { data: userStatusData,refetch:fetchUserStatus } = useGetUserStatusQuery(Number(receiverId));
 
-  
-useEffect(()=>{
- setIsOnline(userStatusData?.data)
-},[userStatusData])
+  const { data: userStatusData, refetch: fetchUserStatus } =
+    useGetUserStatusQuery(Number(receiverId));
+
+  useEffect(() => {
+    setIsOnline(userStatusData?.data);
+  }, [userStatusData]);
 
   const navigation = useNavigation();
   const { theme, isDark, toggleTheme } = useTheme();
@@ -88,8 +92,8 @@ useEffect(()=>{
   useEffect(() => {
     setChatMessages(data?.messages || []);
     refetch();
-    fetchUserStatus()
-  }, [data]);
+    fetchUserStatus();
+  }, [data,isOnline]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -104,19 +108,18 @@ useEffect(()=>{
       scrollViewRef.current.scrollToEnd({ animated: true });
     }
   }, []);
-  const focused=useIsFocused()
 
   useEffect(() => {
+    updateSendertoMessageReaded(receiverId);
     onUserStatusChanged(data => {
-      if(data.userId==receiverId){
-        setIsOnline(data)
+      if (data.userId == receiverId) {
+        setIsOnline(data);
       }
-   
     });
-    onReceiveMessage(msg => {  
+    onReceiveMessage(async msg => {
       if (msg?.senderId === receiverId) {
-        updateReadeStatus()
         setChatMessages(prev => [...prev, { ...msg }]);
+        updateSendertoMessageReaded(receiverId);
       }
     });
 
@@ -124,15 +127,23 @@ useEffect(()=>{
     onMessageSent(msg => {
       setChatMessages(prev => [...prev, { ...msg }]);
     });
-
+    onGetReadeMessagesid(id => {
+     
+      setChatMessages(prev => {
+        const data = prev.map(item =>
+          id.includes(item.id) ? { ...item, isRead: true } : item,
+        );
+        return data;
+      });
+    });
     // Cleanup on unmount
     return () => {
       offReceiveMessage();
       offMessageSent();
       offUserStatusChanged();
+      offGetReadMessagesId();
     };
-  }, [focused]);
-
+  }, [receiverId]);
 
   const handleLinkPress = (linkInfo: LinkInfo) => {
     console.log('Link pressed:', linkInfo);
@@ -206,7 +217,11 @@ useEffect(()=>{
 
   return (
     <View style={{ flex: 1 }}>
-      <ChatHeader userStatus={isOnline} title={receiverName} text={isOnline ? 'Online' : 'Offline'} />
+      <ChatHeader
+        userStatus={isOnline}
+        title={receiverName}
+        text={isOnline ? 'Online' : 'Offline'}
+      />
       <AppBackground>
         <KeyboardAvoidingView
           style={styles.keyboardContainer}

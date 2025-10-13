@@ -1,10 +1,10 @@
 import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
-export interface userStatustype{
-   userId: string;
-    isActive: true | false;
-    lastLogin: string | Date|undefined;
+export interface userStatustype {
+  userId: string;
+  isActive: true | false;
+  lastLogin: string | Date | undefined;
 }
 
 // Initialize socket connection
@@ -60,7 +60,7 @@ export const offMessageSent = () => {
   socket.off('messageSent');
 };
 export const onUserStatusChanged = (
-  callback: (data:userStatustype) => void,
+  callback: (data: userStatustype) => void,
 ) => {
   if (!socket) throw new Error('Socket not initialized');
   socket.on('userStatusChanged', callback);
@@ -76,4 +76,23 @@ export const offUserStatusChanged = () => {
 export const getSocket = () => {
   if (!socket) throw new Error('Socket not initialized');
   return socket;
+};
+export const updateSendertoMessageReaded = (receiverId: string) => {
+  if (!socket) {
+    return 'Socket not connected';
+  }
+  socket.emit('readMessage', {receiverId});
+};
+
+export const onGetReadeMessagesid = (callback: (data: number[]) => void) => {
+  if (!socket) {
+    return 'Socket not connected';
+  }
+  socket.on('readMessagesid', callback);
+};
+export const offGetReadMessagesId = () => {
+  if (!socket) {
+    return;
+  }
+  socket.off('readMessagesid');
 };

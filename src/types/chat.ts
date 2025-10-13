@@ -9,6 +9,7 @@ export interface ChatMessage {
   createdAt: Date | string;
   updatedAt: Date | string;
   status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed'; // Optional status field
+  isDelivered:boolean
 }
 
 export interface MessageGroup {

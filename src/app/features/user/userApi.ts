@@ -47,12 +47,17 @@ export interface ChatRespones {
   id: number;
   chat:Chat;
   messages: ChatMessage[]; // optional, if you include chat messages
-  unreadCount?: number;
+  
 }
 export interface userStatusResponseType{
   message:string,
   status:true|false
   data:userStatustype
+}
+export interface chatReadeStatusData{
+  updatedCount: number|undefined;
+  status:true|false,
+  message:string
 }
 
 
@@ -108,7 +113,7 @@ export const authApi = api.injectEndpoints({
         }),
         providesTags:["Chat"]
     }),
-    chatReadStatus:builder.query<ChatRespones,number>({
+    chatReadStatus:builder.query<chatReadeStatusData,number>({
         query:(userId)=>({
             url:`users/chats/readeStatus/${userId}`,
             method:'GET'
