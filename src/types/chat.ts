@@ -1,7 +1,7 @@
 export interface ChatMessage {
   id: number;
-  senderId: number;
-  receiverId: number;
+  senderId: string;
+  receiverId: string;
   message: string;
   messageType: 'text' | 'image' | 'file' | 'audio';
   attachments?: string[];
@@ -13,7 +13,7 @@ export interface ChatMessage {
 }
 
 export interface MessageGroup {
-  senderId: number;
+  senderId: string;
   messages: ChatMessage[];
   timestamp: Date | string;
   isConsecutive: boolean;

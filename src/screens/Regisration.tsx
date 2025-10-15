@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { setToken, setUserId } from '@utils/storage';
-import { initSocket } from '@utils/socket';
 import Contstants from '@utils/Contstants';
 import AppBackground from '@components/AppBackground';
 import AppInput from '@components/AppInput';

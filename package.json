@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
+    "@notifee/react-native": "^9.1.8",
     "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native-community/blur": "^4.4.1",
     "@react-native/new-app-screen": "0.81.4",

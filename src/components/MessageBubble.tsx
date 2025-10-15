@@ -24,8 +24,8 @@ interface MessageBubbleProps {
   onLinkPress?: (linkInfo: LinkInfo) => void;
   onActionPress?: (action: MessageAction) => void;
   actions?: MessageAction[];
-  recever: number;
-  sender: number;
+  recever: string;
+  sender: string;
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({

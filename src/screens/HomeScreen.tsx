@@ -41,10 +41,11 @@ import {
   offMessageSent,
   onUserStatusChanged,
   offUserStatusChanged,
-  userStatustype,
-  updateSendertoMessageReaded,
-  onGetReadeMessagesid,
+  UserStatusType,
+  updateSenderToMessageRead,
+  onGetReadMessagesId,
   offGetReadMessagesId,
+  getSocket,
 } from '@utils/socket';
 import { getUserId } from '@utils/storage';
 import { getData } from 'src/api/apiMethods';
@@ -57,6 +58,7 @@ import {
   useGetUserStatusQuery,
 } from 'src/app/features/user/userApi';
 import ChatHeader from '@components/ChatHeader';
+
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   HomeStackParamList,
   'HomeMain'
@@ -71,11 +73,11 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
   const { receiverId, receiverName } = route.params || {};
 
   const { data, isLoading, refetch } = useFetchuserchatQuery(
-    Number(receiverId),
+receiverId,
   );
 
   const { data: userStatusData, refetch: fetchUserStatus } =
-    useGetUserStatusQuery(Number(receiverId));
+    useGetUserStatusQuery(receiverId);
 
   useEffect(() => {
     setIsOnline(userStatusData?.data);
@@ -83,7 +85,7 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
 
   const navigation = useNavigation();
   const { theme, isDark, toggleTheme } = useTheme();
-  const [isOnline, setIsOnline] = useState<userStatustype>();
+  const [isOnline, setIsOnline] = useState<UserStatusType>();
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   // const [isLoading, setIsLoading] = useState(false);
@@ -108,42 +110,120 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
       scrollViewRef.current.scrollToEnd({ animated: true });
     }
   }, []);
+  const focused=useIsFocused()
 
-  useEffect(() => {
-    updateSendertoMessageReaded(receiverId);
-    onUserStatusChanged(data => {
-      if (data.userId == receiverId) {
+//  useEffect(() => {
+//   if (!receiverId) return;
+
+//   // 1️⃣ Immediately mark messages as read for the receiver
+//   updateSenderToMessageRead(receiverId);
+
+//   // 2️⃣ Define stable callbacks for socket events
+//   const handleNewMessage = async (msg: any) => {
+//     if (msg?.senderId === receiverId) {
+//       setChatMessages(prev => [...prev, { ...msg }]);
+//       updateSenderToMessageRead(receiverId);
+//     }
+//   };
+
+//   const handleMessageSent = (msg: any) => {
+//     setChatMessages(prev => [...prev, { ...msg }]);
+//   };
+
+//   const handleReadMessagesId = (ids: number[]) => {
+//     setChatMessages(prev =>
+//       prev.map(item =>
+//         ids.includes(item.id) ? { ...item, isRead: true } : item
+//       )
+//     );
+//   };
+
+//   const handleUserStatus = (data: any) => {
+//     if (data.userId === receiverId) {
+//       setIsOnline(data);
+//     }
+//   };
+
+//   // 3️⃣ Attach listeners (order: messages first, then status)
+//   onReceiveMessage(handleNewMessage);
+//   onMessageSent(handleMessageSent);
+//   onGetReadMessagesId(handleReadMessagesId);
+//   onUserStatusChanged(handleUserStatus);
+
+//   // 4️⃣ Cleanup on unmount or dependency change
+//   return () => {
+//     offReceiveMessage(handleNewMessage);
+//     offMessageSent(handleMessageSent);
+//     offGetReadMessagesId(handleReadMessagesId);
+//     offUserStatusChanged(handleUserStatus);
+//   };
+// }, [receiverId, focused]);
+
+useEffect(() => {
+  const socket = getSocket();
+  if (!socket || !receiverId) return;
+
+  const setupListeners = () => {
+    console.log("🟢 Setting up socket listeners for receiver:", receiverId);
+
+    updateSenderToMessageRead(receiverId);
+
+    const handleNewMessage = (msg: any) => {
+      if (msg?.senderId === receiverId) {
+        setChatMessages(prev => [...prev, msg]);
+        updateSenderToMessageRead(receiverId);
+      }
+    };
+
+    const handleMessageSent = (msg: any) => {
+      setChatMessages(prev => [...prev, msg]);
+    };
+
+    const handleReadMessagesId = (ids: number[]) => {
+      setChatMessages(prev =>
+        prev.map(item =>
+          ids.includes(item.id) ? { ...item, isRead: true } : item
+        )
+      );
+    };
+
+    const handleUserStatus = (data: any) => {
+      if (data.userId === receiverId) {
         setIsOnline(data);
       }
-    });
-    onReceiveMessage(async msg => {
-      if (msg?.senderId === receiverId) {
-        setChatMessages(prev => [...prev, { ...msg }]);
-        updateSendertoMessageReaded(receiverId);
-      }
-    });
-
-    // Listen for ack
-    onMessageSent(msg => {
-      setChatMessages(prev => [...prev, { ...msg }]);
-    });
-    onGetReadeMessagesid(id => {
-     
-      setChatMessages(prev => {
-        const data = prev.map(item =>
-          id.includes(item.id) ? { ...item, isRead: true } : item,
-        );
-        return data;
-      });
-    });
-    // Cleanup on unmount
-    return () => {
-      offReceiveMessage();
-      offMessageSent();
-      offUserStatusChanged();
-      offGetReadMessagesId();
     };
-  }, [receiverId]);
+
+    onReceiveMessage(handleNewMessage);
+    onMessageSent(handleMessageSent);
+    onGetReadMessagesId(handleReadMessagesId);
+    onUserStatusChanged(handleUserStatus);
+
+    return () => {
+      offReceiveMessage(handleNewMessage);
+      offMessageSent(handleMessageSent);
+      offGetReadMessagesId(handleReadMessagesId);
+      offUserStatusChanged(handleUserStatus);
+    };
+  };
+
+  if (socket.connected) {
+    console.log("✅ Socket already connected");
+    return setupListeners();
+  } else {
+    console.log("⏳ Waiting for socket connection...");
+    const onConnect = () => {
+      console.log("🔗 Socket connected, attaching listeners now");
+      setupListeners();
+      socket.off("connect", onConnect); // remove after setup
+    };
+    socket.on("connect", onConnect);
+  }
+
+  // Cleanup on component unmount
+  return () => {
+    socket.off("connect");
+  };
+}, [receiverId]);
 
   const handleLinkPress = (linkInfo: LinkInfo) => {
     console.log('Link pressed:', linkInfo);
@@ -246,8 +326,8 @@ const HomeScreen: React.FC<Props> = ({ route }) => {
                     <MessageBubble
                       key={message.id}
                       message={message}
-                      recever={Number(receiverId)}
-                      sender={Number(getUserId())}
+                      recever={receiverId}
+                      sender={getUserId()}
                       theme={theme}
                       isGrouped={group.isConsecutive && messageIndex > 0}
                       showAvatar={shouldShowAvatar(group, messageIndex)}

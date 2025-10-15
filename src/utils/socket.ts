@@ -1,98 +1,137 @@
-import { io, Socket } from 'socket.io-client';
+// socket.ts
+import { io, Socket } from "socket.io-client";
+import { ChatMessage } from "src/types/chat";
+import { IUser } from "src/types/user";
 
-let socket: Socket | null = null;
-export interface userStatustype {
+export interface UserStatusType {
   userId: string;
-  isActive: true | false;
-  lastLogin: string | Date | undefined;
+  isActive: boolean;
+  lastLogin?: string | Date;
 }
 
-// Initialize socket connection
-export const initSocket = (token: string, baseUrl: string) => {
-  if (!socket) {
-    socket = io(baseUrl, {
-      auth: { token },
-      transports: ['websocket'], // important for React Native
-    });
+let socket: Socket | null = null;
+export interface messageNotificationType{
+  newMessage:ChatMessage,
+  User:IUser
+}
 
-    socket.on('connect', () => {
-      console.log('⚡ Connected to socket:', socket?.id);
-    });
+/**
+ * Initialize socket once (global singleton)
+ */
+export const initSocket = (token: string, baseUrl: string): Socket => {
+  if (socket) return socket; // prevent re-initialization
 
-    socket.on('connect_error', err => {
-      console.error('Socket connection error:', err.message);
-    });
-  }
+  socket = io(baseUrl, {
+    auth: { token },
+    transports: ["websocket"],
+  });
+
+  socket.on("connect", () => {
+    console.log("⚡ Socket connected:", socket?.id);
+  });
+
+  socket.on("disconnect", reason => {
+    console.warn("Socket disconnected:", reason);
+  });
+
+  socket.on("connect_error", err => {
+    console.error("Socket connection error:", err.message);
+  });
+
   return socket;
 };
 
-// Emit message to backend
+/**
+ * Get socket instance (after initialization)
+ */
+export const getSocket = (): Socket => {
+  if (!socket) throw new Error("Socket not initialized. Call initSocket() first.");
+  return socket;
+};
+
+/**
+ * Clear and disconnect socket (optional logout)
+ */
+export const destroySocket = () => {
+  if (socket) {
+    socket.removeAllListeners();
+    socket.disconnect();
+    socket = null;
+  }
+};
+
+/**
+ * Emit / on / off wrappers
+ */
 export const sendMessage = (data: {
-  // chatId: string;
   receiverId: string;
   message: string;
   messageType?: string;
 }) => {
-  if (!socket) throw new Error('Socket not initialized');
-  socket.emit('sendMessage', data);
+  const s = getSocket();
+  s.emit("sendMessage", data);
 };
 
-// Listen for incoming messages
 export const onReceiveMessage = (callback: (msg: any) => void) => {
-  if (!socket) throw new Error('Socket not initialized');
-  socket.on('newMessage', callback);
+  const s = getSocket();
+  s.off("newMessage", callback); // avoid duplicates
+  s.on("newMessage", callback);
 };
 
-// Listen for ack of sent messages
+export const offReceiveMessage = (callback?: (msg: any) => void) => {
+  const s = getSocket();
+  if (callback) s.off("newMessage", callback);
+  else s.off("newMessage");
+};
+
 export const onMessageSent = (callback: (msg: any) => void) => {
-  if (!socket) throw new Error('Socket not initialized');
-  socket.on('messageSent', callback);
+  const s = getSocket();
+  s.off("messageSent", callback);
+  s.on("messageSent", callback);
 };
 
-// Remove listeners (for cleanup)
-export const offReceiveMessage = () => {
-  if (!socket) return;
-  socket.off('newMessage');
+export const offMessageSent = (callback?: (msg: any) => void) => {
+  const s = getSocket();
+  if (callback) s.off("messageSent", callback);
+  else s.off("messageSent");
 };
 
-export const offMessageSent = () => {
-  if (!socket) return;
-  socket.off('messageSent');
-};
-export const onUserStatusChanged = (
-  callback: (data: userStatustype) => void,
-) => {
-  if (!socket) throw new Error('Socket not initialized');
-  socket.on('userStatusChanged', callback);
+export const updateSenderToMessageRead = (receiverId: string) => {
+  const s = getSocket();
+  s.emit("readMessage", { receiverId });
 };
 
-// Remove listener for user status
-export const offUserStatusChanged = () => {
-  if (!socket) return;
-  socket.off('userStatusChanged');
+export const onGetReadMessagesId = (callback: (data: number[]) => void) => {
+  const s = getSocket();
+  s.off("readMessagesid", callback);
+  s.on("readMessagesid", callback);
 };
 
-// Get raw socket instance if needed
-export const getSocket = () => {
-  if (!socket) throw new Error('Socket not initialized');
-  return socket;
-};
-export const updateSendertoMessageReaded = (receiverId: string) => {
-  if (!socket) {
-    return 'Socket not connected';
-  }
-  socket.emit('readMessage', {receiverId});
+export const offGetReadMessagesId = (callback?: (data: number[]) => void) => {
+  const s = getSocket();
+  if (callback) s.off("readMessagesid", callback);
+  else s.off("readMessagesid");
 };
 
-export const onGetReadeMessagesid = (callback: (data: number[]) => void) => {
-  if (!socket) {
-    return 'Socket not connected';
-  }
-  socket.on('readMessagesid', callback);
+export const onUserStatusChanged = (callback: (data: UserStatusType) => void) => {
+  const s = getSocket();
+  s.off("userStatusChanged", callback);
+  s.on("userStatusChanged", callback);
 };
-export const offGetReadMessagesId = () => {
-  if (!socket) {
-    return;
-  }
-  socket.off('readMessagesid');
+
+export const offUserStatusChanged = (callback?: (data: UserStatusType) => void) => {
+  const s = getSocket();
+  if (callback) s.off("userStatusChanged", callback);
+  else s.off("userStatusChanged");
+};
+export const onSocketNotification=(callBack?:(data:messageNotificationType)=>void)=>{
+  const s=getSocket()
+  if(callBack) s.on("pushNotification",callBack)
+    else s.off('pushNotification')
+}
+
+export const offSocketNotification = (callback?: (data: UserStatusType) => void) => {
+  const s = getSocket();
+  if (callback) s.off("pushNotification", callback);
+  else s.off("pushNotification");
 };

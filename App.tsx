@@ -12,36 +12,78 @@ import {
   DefaultTheme,
   DarkTheme,
 } from '@react-navigation/native';
-import { useColorScheme, StatusBar, LogBox } from 'react-native';
+import { useColorScheme, StatusBar, LogBox, Button, Alert } from 'react-native';
 import RootNavigator from '@RootNavigation';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { Provider } from 'react-redux';
 import { store } from 'src/app/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import notifee, { AndroidImportance } from '@notifee/react-native';
+import {
+  initSocket,
+  messageNotificationType,
+  offSocketNotification,
+  onSocketNotification,
+} from '@utils/socket';
+import { getToken } from '@utils/storage';
+import Contstants from '@utils/Contstants';
 
 function App() {
   LogBox.ignoreAllLogs(true);
-  const isDarkMode = useColorScheme() === 'dark';
-  // useEffect(() => {
-  //   initSocket(
-  //     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZGZjMDVkOWU1MWI0MGJkNDkwOWI3ZCIsImlhdCI6MTc1OTU1ODA1NSwiZXhwIjoxNzYyMTUwMDU1fQ.3MDH6hTXk5ELW8oGoe35BtonyA0B4Oj70mssP1tp-xw',
-  //     'http://10.0.2.2:5000',
-  //   );
-  // }, []);
-  return (
+
+  useEffect(() => {
+    const token = getToken();
+    if (token) {
+      initSocket(token, Contstants.SocketUrl);
+    }
+  }, []);
+  async function onDisplayNotification(data:messageNotificationType) {
+    await notifee.requestPermission();
    
-      <SafeAreaView  style={{ flex: 1,backgroundColor:"#000"}}>
-       <StatusBar barStyle={"dark-content"}/>
-        <ThemeProvider>
-          <NavigationContainer >
-            <Provider store={store}>
-              <RootNavigator />
-            </Provider>
-          </NavigationContainer>
-        </ThemeProvider>
-      
-      </SafeAreaView>
-  
+    
+    // Create a channel (required for Android)
+    const channelId = await notifee.createChannel({
+      id: 'default',
+      name: 'Default Channel',
+      importance: AndroidImportance.HIGH,
+    });
+
+    // Display a notification
+    await notifee.displayNotification({
+      title: "New Message",
+      body: data.newMessage.message,
+      android: {
+        channelId,
+        smallIcon: 'ic_launcher',
+        // pressAction is needed if you want the notification to open the app when pressed
+        pressAction: {
+          id: 'default',
+        },
+      },
+    });
+  }
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      return;
+    }
+    onSocketNotification(onDisplayNotification);
+    return () => {
+      offSocketNotification(onDisplayNotification);
+    };
+  }, []);
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+      <StatusBar barStyle={'dark-content'} />
+      <ThemeProvider>
+        <NavigationContainer>
+          <Provider store={store}>
+            <RootNavigator />
+          </Provider>
+        </NavigationContainer>
+      </ThemeProvider>
+    </SafeAreaView>
   );
 }
 
