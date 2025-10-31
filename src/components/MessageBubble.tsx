@@ -1,24 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Animated,
+  Image,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { ChatMessage, ChatTheme, MessageAction } from '../types/chat';
-import Avatar from './Avatar';
-import ClickableText from './ClickableText';
 import { LinkInfo } from '../utils/linkDetector';
 import Doublecheck from '@assets/icons/doublecheck.svg';
 import DoubleCheckReded from '@assets/icons/doublecheckReaded.svg';
 import SingleCheck from '@assets/icons/SingleCheck.svg';
+import { getUserId } from '@utils/storage';
+import RenderAttachments from './renderAttchmenst';
+
+// Enable LayoutAnimation for Android
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 interface MessageBubbleProps {
   message: ChatMessage;
   theme: ChatTheme;
   isGrouped?: boolean;
-  showAvatar?: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
   onLinkPress?: (linkInfo: LinkInfo) => void;
@@ -32,86 +43,94 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   theme,
   isGrouped = false,
-  showAvatar = true,
   onPress,
   onLongPress,
   onLinkPress,
   onActionPress,
   actions = [],
   recever,
-  sender,
 }) => {
   const [showActions, setShowActions] = useState(false);
   const [scaleValue] = useState(new Animated.Value(1));
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const sender = getUserId();
 
-  const isUser = message.receiverId === recever;
-  const isAI = message.senderId === sender;
+  const isUser = message.senderId != recever;
+  const isAI = message.senderId !== sender;
+
+  // Pulsing animation for sending messages
+  React.useEffect(() => {
+    if (message.status === 'sending') {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 0.95,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [message.status, pulseAnim]);
 
   const formatTime = (date: Date | string | undefined) => {
-    if (!date) return '';
+  if (!date) return '';
 
-    // Ensure date is a Date object
-    let dt: Date;
-    if (date instanceof Date) {
-      dt = date;
-    } else {
-      dt = new Date(date);
-    }
+  const dt = date instanceof Date ? date : new Date(date);
+  const now = new Date();
+  const diff = now.getTime() - dt.getTime();
 
-    const now = new Date();
-    const diff = now.getTime() - dt.getTime();
+  // < 1 min
+  if (diff < 60 * 1000) return 'Now';
 
-    // Less than 1 minute
-    if (diff < 60 * 1000) return 'Just now';
+  // < 1 hour
+  if (diff < 60 * 60 * 1000) {
+    const minutes = Math.floor(diff / (60 * 1000));
+    return `${minutes}m ago`;
+  }
 
-    // Less than 1 hour
-    if (diff < 60 * 60 * 1000) {
-      const minutes = Math.floor(diff / (60 * 1000));
-      return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
-    }
-
-    // Today
-    if (dt.toDateString() === now.toDateString()) {
-      return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    // Yesterday
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    if (dt.toDateString() === yesterday.toDateString()) {
-      return `Yesterday at ${dt.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      })}`;
-    }
-
-    // Older
-    if (now.getFullYear() !== dt.getFullYear()) {
-      return dt.toLocaleDateString([], {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    }
-
-    // This year
-    return dt.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const options: Intl.DateTimeFormatOptions = {
+    hour: '2-digit',
+    minute: '2-digit',
   };
 
-  const getStatusIcon = () => {
-    switch (message.status) {
-      case 'sending':
-        return '⏳';
-      case 'sent':
-        return '✓';
-      case 'delivered':
-        return '✓✓';
-      case 'failed':
-        return '❌';
-      default:
-        return '';
-    }
-  };
+  // same day
+  if (dt.toDateString() === now.toDateString()) {
+    return dt.toLocaleTimeString([], options);
+  }
+
+  // yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (dt.toDateString() === yesterday.toDateString()) {
+    return `Yesterday, ${dt.toLocaleTimeString([], options)}`;
+  }
+
+  // different year
+  if (now.getFullYear() !== dt.getFullYear()) {
+    return dt.toLocaleDateString([], {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      ...options,
+    });
+  }
+
+  // same year but older date
+  return dt.toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+    ...options,
+  });
+};
+
 
   const handlePress = () => {
     Animated.sequence([
@@ -127,127 +146,160 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       }),
     ]).start();
 
-    if (onPress) {
-      onPress();
-    }
+    onPress?.();
   };
 
   const handleLongPress = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowActions(true);
-    if (onLongPress) {
-      onLongPress();
+    onLongPress?.();
+  };
+
+  const handleActionPress = (action: MessageAction) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowActions(false);
+    onActionPress?.(action);
+  };
+
+  const renderStatusIcon = () => {
+    if (!isUser) return null;
+
+    let statusProps = {
+      height: 14,
+      width: 14,
+      fill: isUser ? 'rgba(255,255,255,0.7)' : theme.colors.textSecondary,
+    };
+
+    let StatusIcon = SingleCheck;
+
+    if (message.isRead) {
+      statusProps.height=25
+      statusProps.width=25
+      StatusIcon = DoubleCheckReded;
+    } else if (message.isDelivered) {
+       statusProps.height=25
+      statusProps.width=25
+      StatusIcon = Doublecheck;
     }
+
+    return (
+      <View style={styles.statusContainer}>
+        <StatusIcon {...statusProps} />
+      </View>
+    );
   };
 
   const bubbleStyle = [
     styles.bubble,
     {
       backgroundColor: isUser ? theme.colors.userBubble : theme.colors.aiBubble,
-      borderRadius: theme.borderRadius.lg,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: 2,
-      paddingTop: 5,
-      marginVertical: isGrouped ? theme.spacing.xs : theme.spacing.sm,
-      marginHorizontal: theme.spacing.sm,
-      maxWidth: '80%',
-      alignSelf: isUser ? 'flex-end' : 'flex-start',
-      borderBottomLeftRadius: isUser
-        ? theme.borderRadius.lg
-        : theme.borderRadius.sm,
-      borderBottomRightRadius: isUser
-        ? theme.borderRadius.sm
-        : theme.borderRadius.lg,
+      borderRadius: isUser ? 18 : 18,
+      borderBottomLeftRadius: isUser ? 18 : 4,
+      borderBottomRightRadius: isUser ? 4 : 18,
+      marginVertical: isGrouped ? 2 : 6,
+    },
+    message.status === 'sending' && {
+      opacity: 0.8,
+      transform: [{ scale: pulseAnim }],
+    },
+    message.status === 'failed' && {
+      backgroundColor: isUser ? '#ffebee' : '#ffebee',
+      borderColor: '#f44336',
+      borderWidth: 1,
+    },
+    // Shadow effects
+    !isGrouped && {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
     },
   ];
 
-  const textStyle = [
-    styles.text,
+  const containerStyle = [
+    styles.container,
     {
-      color: isUser ? theme.colors.userText : theme.colors.aiText,
-      fontSize: 15,
+      flexDirection: isUser ? 'row-reverse' : 'row',
+      alignItems: 'flex-end',
+      marginHorizontal: 12,
     },
-  ];
-
-  const timeStyle = [
-    styles.time,
-    {
-      color: theme.colors.textSecondary,
-      fontSize: 12,
-      marginTop: theme.spacing.xs,
-    },
+    isGrouped ? styles.groupedContainer : ({} as any),
   ];
 
   return (
     <Animated.View
-      style={[
-        styles.container,
-        {
-          transform: [{ scale: scaleValue }],
-          flexDirection: isUser ? 'row-reverse' : 'row',
-          alignItems: 'flex-end',
-        },
-      ]}
+      style={[containerStyle, { transform: [{ scale: scaleValue }] }]}
     >
-      <TouchableOpacity
-        style={bubbleStyle}
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        activeOpacity={0.8}
+      {/* Message Bubble */}
+      <View
+        style={[styles.bubbleWrapper, { maxWidth: isUser ? '85%' : '85%' }]}
       >
-        <Text
-          style={[
-            {
-              borderWidth: 0,
-              fontSize: 16,
-              paddingRight: '8%',
-              color: isUser ? '#fff' : '#00',
-            },
-          ]}
+        <TouchableOpacity
+          style={bubbleStyle}
+          onPress={handlePress}
+          onLongPress={handleLongPress}
+          activeOpacity={0.9}
+          delayLongPress={200}
         >
-          {message.message}
-        </Text>
+          {/* Message Text - Only show if it's a text message or has text content */}
+          {(message.messageType === 'text' || message.message) && (
+            <Text
+              style={[
+                styles.messageText,
+                {
+                  color: isUser ? theme.colors.userText : theme.colors.aiText,
+                },
+                message.status === 'failed' && { color: '#d32f2f' },
+              ]}
+            >
+              {message.message}
+              {message.status === 'failed' && ' ❌'}
+            </Text>
+          )}
 
-        <View
-          style={[
-            styles.footer,
-            {
-              flexDirection: isUser ? 'row' : 'row',
-              alignSelf: 'flex-end',
-              marginLeft: '5%',
-              marginTop: 3,
-              alignItems: 'center',
-            },
-          ]}
-        >
-          <Text
+          {/* Attachments */}
+          <RenderAttachments message={message} isUser={isUser} theme={theme} />
+
+          {/* Message Footer */}
+          <View
             style={[
+              styles.footer,
               {
-                marginLeft: '0%',
-                fontSize: 10,
-                marginTop: -3,
-                color: isUser ? '#f9f9f9' : '#000',
+                justifyContent: isUser ? 'flex-end' : 'flex-start',
               },
             ]}
           >
-            {formatTime(message.createdAt)}
-          </Text>
-          <View style={{marginLeft:3}}>
-          {isUser ? (
-            message.isRead ? (
-              <DoubleCheckReded height={21} width={21} fill={'#fff'} />
-            ) : message.isDelivered ? (
-              <Doublecheck height={21} width={21} fill={'#fff'} />
-            ) : <SingleCheck height={12} width={12}  fill={"#fff"}/>
-          ) : null}
+            <Text
+              style={[
+                styles.timeText,
+                {
+                  color: isUser ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+                },
+                message.status === 'failed' && { color: '#d32f2f' },
+              ]}
+            >
+              {formatTime(message.createdAt)}
+            </Text>
+            {renderStatusIcon()}
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
 
+      {/* Actions Menu */}
       {showActions && actions.length > 0 && (
         <View
           style={[
-            styles.actions,
-            { left: isUser ? 'auto' : 0, right: isUser ? 0 : 'auto' },
+            styles.actionsContainer,
+            {
+              [isUser ? 'right' : 'left']: 8,
+              backgroundColor: theme.colors.surface,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+              elevation: 5,
+            },
           ]}
         >
           {actions.map(action => (
@@ -256,23 +308,22 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               style={[
                 styles.actionButton,
                 {
-                  backgroundColor: action.color || theme.colors.surface,
-                  borderRadius: theme.borderRadius.sm,
-                  paddingHorizontal: theme.spacing.sm,
-                  paddingVertical: theme.spacing.xs,
-                  marginHorizontal: theme.spacing.xs,
+                  backgroundColor: action.color || theme.colors.primary,
                 },
               ]}
-              onPress={() => {
-                onActionPress?.(action);
-                setShowActions(false);
-              }}
+              onPress={() => handleActionPress(action)}
             >
-              <Text style={[styles.actionText, { color: theme.colors.text }]}>
+              <Text style={styles.actionText}>
                 {action.icon} {action.label}
               </Text>
             </TouchableOpacity>
           ))}
+          <TouchableOpacity
+            style={styles.closeActions}
+            onPress={() => setShowActions(false)}
+          >
+            <Text style={styles.closeActionsText}>✕</Text>
+          </TouchableOpacity>
         </View>
       )}
     </Animated.View>
@@ -281,51 +332,111 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    // Styles applied dynamically
+    marginVertical: 1,
+  },
+  groupedContainer: {
+    marginVertical: 0,
+  },
+  bubbleWrapper: {
+    minHeight: 44,
   },
   bubble: {
-    // Styles applied dynamically
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    minWidth: 60,
   },
-  text: {
-    fontSize: 18,
-  },
-  time: {
-    // Styles applied dynamically
-  },
-  footer: {
-    marginTop: 1,
+  messageText: {
+    fontSize: 16,
+    lineHeight: 20,
+    paddingRight: 8,
   },
   attachments: {
     marginTop: 8,
   },
-  reactions: {
-    marginTop: 8,
-    flexWrap: 'wrap',
+  attachmentContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 6,
   },
-  reaction: {
-    // Styles applied dynamically
+  attachmentImage: {
+    width: 220,
+    height: 160,
+    borderRadius: 12,
   },
-  reactionText: {
-    fontSize: 12,
+  videoContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  typingContainer: {
-    marginTop: 4,
+  videoPlaceholder: {
+    width: 220,
+    height: 140,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
   },
-  typingDots: {
-    // Animation will be added here
+  videoText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
-  actions: {
-    position: 'absolute',
-    top: -40,
+  audioContainer: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 6,
+    alignItems: 'center',
+  },
+  audioText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  fileContainer: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  fileText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  footer: {
+    marginTop: 2,
     flexDirection: 'row',
-    zIndex: 1000,
+    alignItems: 'center',
+  },
+  timeText: {
+    fontSize: 11,
+    marginRight: 4,
+  },
+  statusContainer: {
+    marginLeft: 2,
+  },
+  actionsContainer: {
+    position: 'absolute',
+    bottom: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 20,
+    marginBottom: 8,
   },
   actionButton: {
-    // Styles applied dynamically
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginHorizontal: 2,
   },
   actionText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#fff',
+  },
+  closeActions: {
+    padding: 6,
+    marginLeft: 4,
+  },
+  closeActionsText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#666',
   },
 });
 

@@ -58,6 +58,10 @@ import {
   useGetUserStatusQuery,
 } from 'src/app/features/user/userApi';
 import ChatHeader from '@components/ChatHeader';
+import AttachmentModal from '@components/AttchmentModal';
+import { pickAttachment } from '@utils/pickAttachment';
+import AttachmentPreview from '@components/attchmentsPreview';
+import { uploadFile } from '@utils/fileUpload';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   HomeStackParamList,
@@ -71,10 +75,24 @@ type Props = {
 
 const HomeScreen: React.FC<Props> = ({ route }) => {
   const { receiverId, receiverName } = route.params || {};
+  const [attachments, setAtachments] = useState<{
+    name: string;
+    type: string;
+    uri: string;
+  } | null>(null);
+  const [attachmentType, setAttchmenttype] = useState('');
 
-  const { data, isLoading, refetch } = useFetchuserchatQuery(
-receiverId,
-  );
+  const [showAttachmentModal, setShowAttachmentModal] = useState(false);
+  const handleAttachmentSelect = async (types: 'image' | 'video' | 'file') => {
+    setShowAttachmentModal(false);
+    const respopnse = await pickAttachment(types);
+    if (respopnse) {
+      const { name, type, uri } = respopnse;
+      if (name && uri) setAtachments({ name, type, uri });
+      setAttchmenttype(types);
+    }
+  };
+  const { data, isLoading, refetch } = useFetchuserchatQuery(receiverId);
 
   const { data: userStatusData, refetch: fetchUserStatus } =
     useGetUserStatusQuery(receiverId);
@@ -94,8 +112,10 @@ receiverId,
   useEffect(() => {
     setChatMessages(data?.messages || []);
     refetch();
+  }, [data]);
+  useEffect(() => {
     fetchUserStatus();
-  }, [data,isOnline]);
+  }, [isOnline]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -110,120 +130,117 @@ receiverId,
       scrollViewRef.current.scrollToEnd({ animated: true });
     }
   }, []);
-  const focused=useIsFocused()
+  const focused = useIsFocused();
 
-//  useEffect(() => {
-//   if (!receiverId) return;
-
-//   // 1️⃣ Immediately mark messages as read for the receiver
-//   updateSenderToMessageRead(receiverId);
-
-//   // 2️⃣ Define stable callbacks for socket events
-//   const handleNewMessage = async (msg: any) => {
-//     if (msg?.senderId === receiverId) {
-//       setChatMessages(prev => [...prev, { ...msg }]);
-//       updateSenderToMessageRead(receiverId);
-//     }
-//   };
-
-//   const handleMessageSent = (msg: any) => {
-//     setChatMessages(prev => [...prev, { ...msg }]);
-//   };
-
-//   const handleReadMessagesId = (ids: number[]) => {
-//     setChatMessages(prev =>
-//       prev.map(item =>
-//         ids.includes(item.id) ? { ...item, isRead: true } : item
-//       )
-//     );
-//   };
-
-//   const handleUserStatus = (data: any) => {
-//     if (data.userId === receiverId) {
-//       setIsOnline(data);
-//     }
-//   };
-
-//   // 3️⃣ Attach listeners (order: messages first, then status)
-//   onReceiveMessage(handleNewMessage);
-//   onMessageSent(handleMessageSent);
-//   onGetReadMessagesId(handleReadMessagesId);
-//   onUserStatusChanged(handleUserStatus);
-
-//   // 4️⃣ Cleanup on unmount or dependency change
-//   return () => {
-//     offReceiveMessage(handleNewMessage);
-//     offMessageSent(handleMessageSent);
-//     offGetReadMessagesId(handleReadMessagesId);
-//     offUserStatusChanged(handleUserStatus);
-//   };
-// }, [receiverId, focused]);
-
-useEffect(() => {
-  const socket = getSocket();
-  if (!socket || !receiverId) return;
-
-  const setupListeners = () => {
-    console.log("🟢 Setting up socket listeners for receiver:", receiverId);
-
-    updateSenderToMessageRead(receiverId);
-
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) {
+      console.log('socket not connected');
+      return;
+    }
     const handleNewMessage = (msg: any) => {
-      if (msg?.senderId === receiverId) {
+      console.log('📩 New message received:', msg);
+      if (msg.senderId === receiverId) {
         setChatMessages(prev => [...prev, msg]);
         updateSenderToMessageRead(receiverId);
       }
     };
+    socket.on('newMessage', handleNewMessage);
+    socket.emit('chatOpened', { receiverId });
+
+    return () => {
+      socket.emit('chatClosed', { receiverId });
+      socket.off('newMessage', handleNewMessage);
+    };
+  }, [receiverId, focused]);
+
+  useEffect(() => {
+    if (!receiverId) return;
+
+    const socket = getSocket();
+    if (!socket) {
+      console.warn('Socket not available from getSocket()');
+      return;
+    }
+
+    console.log(
+      'Socket instance id:',
+      socket.id,
+      'connected:',
+      socket.connected,
+    );
+
+    // stable handlers (use callbacks if they use state setters outside)
 
     const handleMessageSent = (msg: any) => {
+      console.log('✅ message sent event:', msg);
       setChatMessages(prev => [...prev, msg]);
     };
 
-    const handleReadMessagesId = (ids: number[]) => {
+    const handleReadIds = (ids: number[]) => {
+      console.log('🔁 read ids:', ids);
       setChatMessages(prev =>
-        prev.map(item =>
-          ids.includes(item.id) ? { ...item, isRead: true } : item
-        )
+        prev.map(p => (ids.includes(p.id) ? { ...p, isRead: true } : p)),
       );
     };
 
     const handleUserStatus = (data: any) => {
-      if (data.userId === receiverId) {
+      if (data?.userId === receiverId) {
+        if (data?.undeliveredIds?.length > 0) {
+          setChatMessages(prev =>
+            prev.map(p =>
+              data?.undeliveredIds.includes(p.id)
+                ? { ...p, isDelivered: true }
+                : p,
+            ),
+          );
+        }
         setIsOnline(data);
       }
     };
 
-    onReceiveMessage(handleNewMessage);
-    onMessageSent(handleMessageSent);
-    onGetReadMessagesId(handleReadMessagesId);
-    onUserStatusChanged(handleUserStatus);
+    // Helper to (re)attach all listeners once
+    const attachListeners = () => {
+      console.log('Attaching socket listeners');
+      // onReceiveMessage(handleNewMessage);
+      onMessageSent(handleMessageSent);
+      onGetReadMessagesId(handleReadIds);
+      onUserStatusChanged(handleUserStatus);
+    };
 
-    return () => {
-      offReceiveMessage(handleNewMessage);
+    // Helper to remove them
+    const detachListeners = () => {
+      console.log('Detaching socket listeners');
+      // offReceiveMessage(handleNewMessage);
       offMessageSent(handleMessageSent);
-      offGetReadMessagesId(handleReadMessagesId);
+      offGetReadMessagesId(handleReadIds);
       offUserStatusChanged(handleUserStatus);
     };
-  };
 
-  if (socket.connected) {
-    console.log("✅ Socket already connected");
-    return setupListeners();
-  } else {
-    console.log("⏳ Waiting for socket connection...");
+    // Always attach listeners (socket.on will queue them even if not connected),
+    // and also attach on connect to ensure server-side authorization/rooms happen.
+    attachListeners();
+
+    // If socket already connected, inform server (join room / auth)
+    if (socket.connected) {
+      console.log('Socket already connected — sending presence/join message');
+      updateSenderToMessageRead(receiverId); // or emit join-room event if your server expects
+    }
+
+    // On connect/reconnect, ensure server recognizes this socket (auth/join room)
     const onConnect = () => {
-      console.log("🔗 Socket connected, attaching listeners now");
-      setupListeners();
-      socket.off("connect", onConnect); // remove after setup
+      console.log('Socket connected (event)');
+      // re-emit any handshake/room join required by your server
+      updateSenderToMessageRead(receiverId);
     };
-    socket.on("connect", onConnect);
-  }
+    socket.on('connect', onConnect);
 
-  // Cleanup on component unmount
-  return () => {
-    socket.off("connect");
-  };
-}, [receiverId]);
+    // cleanup when effect unmounts or receiverId changes
+    return () => {
+      socket.off('connect', onConnect);
+      detachListeners();
+    };
+  }, [receiverId]);
 
   const handleLinkPress = (linkInfo: LinkInfo) => {
     console.log('Link pressed:', linkInfo);
@@ -286,13 +303,21 @@ useEffect(() => {
 
   const messageGroups = groupMessages(chatMessages);
   const handleChatSend = async () => {
-    const user_id = getUserId() || '';
-    if (!chatInput.trim()) return;
+    let file = '';
+    if (attachments) {
+      const files = await uploadFile('chat', attachments, { tk: 12 });
+      file = files?.fileUrl;
+    }
+
     sendMessage({
       receiverId: receiverId || '',
-      message: chatInput.trim(),
+      message: chatInput.trim() || '',
+      messageType: attachmentType ?? 'text',
+      attachments: file ? [file] : null,
     });
     setChatInput('');
+    setAtachments(null);
+    setAttchmenttype('');
   };
 
   return (
@@ -301,6 +326,13 @@ useEffect(() => {
         userStatus={isOnline}
         title={receiverName}
         text={isOnline ? 'Online' : 'Offline'}
+      />
+      <AttachmentPreview
+        onRemove={() => {
+          setAtachments(null);
+          setAttchmenttype('');
+        }}
+        attachment={attachments}
       />
       <AppBackground>
         <KeyboardAvoidingView
@@ -327,10 +359,10 @@ useEffect(() => {
                       key={message.id}
                       message={message}
                       recever={receiverId}
-                      sender={getUserId()}
+                      sender={getUserId() ?? ''}
                       theme={theme}
                       isGrouped={group.isConsecutive && messageIndex > 0}
-                      showAvatar={shouldShowAvatar(group, messageIndex)}
+                      // showAvatar={shouldShowAvatar(group, messageIndex)}
                       onLinkPress={handleLinkPress}
                       onActionPress={handleMessageAction}
                       actions={getMessageActions(message)}
@@ -361,6 +393,9 @@ useEffect(() => {
                   },
                 ]}
               >
+                <TouchableOpacity onPress={() => setShowAttachmentModal(true)}>
+                  <Text style={{ fontSize: 22, marginRight: 10 }}>📎</Text>
+                </TouchableOpacity>
                 <TextInput
                   style={[
                     styles.textInput,
@@ -385,13 +420,15 @@ useEffect(() => {
                     styles.sendButton,
                     {
                       backgroundColor:
-                        !chatInput.trim() || isLoading
+                        (!chatInput.trim() && !attachments?.uri) || isLoading
                           ? theme.colors.border
                           : theme.colors.primary,
                       borderRadius: theme.borderRadius.xl,
                     },
                   ]}
-                  disabled={!chatInput.trim() || isLoading}
+                  disabled={
+                    (!chatInput.trim() && !attachments?.uri) || isLoading
+                  }
                   accessibilityRole="button"
                   accessibilityLabel="Send message"
                 >
@@ -415,6 +452,13 @@ useEffect(() => {
             </View>
           </View>
         </KeyboardAvoidingView>
+        <AttachmentModal
+          visible={showAttachmentModal}
+          onClose={() => {
+            setShowAttachmentModal(false);
+          }}
+          onSelect={handleAttachmentSelect}
+        />
       </AppBackground>
     </View>
   );

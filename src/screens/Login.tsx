@@ -17,6 +17,7 @@ import { RootStackParamList } from '@navigation/types';
 import { RouteProp } from '@react-navigation/native';
 import { showToast } from '@components/CustomToast';
 import { useLoginMutation } from '../app/features/user/userApi';
+import { initSocket } from '@utils/socket';
 
 type SplashScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -29,8 +30,8 @@ type Props = {
 };
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('email@gmail.com');
+  const [password, setPassword] = useState('123456');
 
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {},
@@ -51,7 +52,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
     try {
       const result = await login({ email, password }).unwrap();
-
+      await initSocket(result.token, Contstants.SocketUrl);
       // ✅ Show message from API if exists
       if (result.message) {
         showToast(result.message);
@@ -101,7 +102,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           error={errors.password}
         />
 
-        <AppButton title="Login" onPress={handleLogin} loading={isLoading} />
+        <AppButton title="Login" onPress={handleLogin} loading={false} />
 
         {/* Registration Button / Link */}
         <TouchableOpacity

@@ -70,7 +70,7 @@ function App() {
     }
     onSocketNotification(onDisplayNotification);
     return () => {
-      offSocketNotification(onDisplayNotification);
+      offSocketNotification();
     };
   }, []);
   return (

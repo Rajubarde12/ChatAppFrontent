@@ -67,6 +67,7 @@ export const sendMessage = (data: {
   receiverId: string;
   message: string;
   messageType?: string;
+  attachments:any[]|null
 }) => {
   const s = getSocket();
   s.emit("sendMessage", data);

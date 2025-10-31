@@ -32,25 +32,18 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
   const navigation = useNavigation<any>();
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={[styles.container]}>
       <StatusBar barStyle="light-content" backgroundColor={backgroundColor} />
       <View style={styles.innerContainer}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+         onPress={()=>navigation.openDrawer()}
           style={styles.left}
         >
           <Menu width={24} height={24} fill="#fff" />
         </TouchableOpacity>
         <View>
           <Text style={styles.title}>{title}</Text>
-          <Text
-            style={[
-              styles.title,
-              { fontSize: 15, textAlign: 'center', fontWeight: '300' },
-            ]}
-          >
-            {text}
-          </Text>
+       
         </View>
 
         {rightIcon ? (
@@ -69,16 +62,24 @@ export default CustomHeader;
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    width: '100%',
-    justifyContent: 'center',
+   padding:15,
+    overflow: 'hidden',
+    backgroundColor: '#6e8e9cff',
+    borderBottomWidth: 0.3,
+    borderColor: 'rgba(255,255,255,0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 25,
+    position: 'relative',
+    zIndex: 10,
   },
   innerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+   
   },
   left: {
     width: 40,

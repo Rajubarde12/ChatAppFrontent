@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  Pressable,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Menu from '@assets/icons/back.svg';
@@ -15,7 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import GradientCircleLetter from './CommonProfileIcon';
 import { BlurView } from '@react-native-community/blur';
 import { fonts } from '@utils/fonts';
-import { userStatustype } from '@utils/socket';
+import { UserStatusType } from '@utils/socket';
 
 interface ChatHeaderProps {
   title?: string;
@@ -24,7 +25,7 @@ interface ChatHeaderProps {
   onRightPress?: () => void;
   backgroundColor?: string;
   text: String;
-  userStatus?:userStatustype
+  userStatus?:UserStatusType
 }
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -92,7 +93,9 @@ const formatDate = (isoDate: string | Date | undefined): string => {
   return (
     <View style={[styles.container]}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Pressable onPress={()=>{navigation.goBack()}}>
         <ArrowBack height={15} width={15} fill={'#fff'} />
+        </Pressable>
         <View>
           
           <GradientCircleLetter

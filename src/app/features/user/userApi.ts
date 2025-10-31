@@ -9,19 +9,24 @@ interface LoginRequest {
   password: string;
 }
 interface RegisterRequest {
-     email: string;
-        name: string;
+  email: string;
+  name: string;
   password: string;
 }
-interface LoginResponse {
-  id: number;
+export interface user {
+  id: string;
   name: string;
   email: string;
   role: string;
-  token: string;
-  status: boolean;
-  message: string;
-//   tokenType: string;
+  avatar: string;
+  status:boolean
+}
+
+interface LoginResponse {
+  message:string,
+  token:string,
+  user:user
+  //   tokenType: string;
 }
 export interface IUsersResponse {
   users: IUser[]; // ✅ array of users
@@ -39,32 +44,30 @@ export interface IParticipant {
   createdAt: string;
   updatedAt: string;
 }
-interface Chat{
-    participants:IParticipant[]
+interface Chat {
+  participants: IParticipant[];
 }
 // Example usage in a chat object
 export interface ChatRespones {
   id: number;
-  chat:Chat;
+  chat: Chat;
   messages: ChatMessage[]; // optional, if you include chat messages
-  
 }
-export interface userStatusResponseType{
-  message:string,
-  status:true|false
-  data:UserStatusType
+export interface userStatusResponseType {
+  message: string;
+  status: true | false;
+  data: UserStatusType;
 }
-export interface chatReadeStatusData{
-  updatedCount: number|undefined;
-  status:true|false,
-  message:string
+export interface chatReadeStatusData {
+  updatedCount: number | undefined;
+  status: true | false;
+  message: string;
 }
-
 
 export const authApi = api.injectEndpoints({
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
-      query: (body) => ({
+      query: body => ({
         url: '/users/login',
         method: 'POST',
         body,
@@ -72,8 +75,9 @@ export const authApi = api.injectEndpoints({
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
+        
           // ✅ store in Redux
-          dispatch(setCredentials({ user: data, token: data.token }));
+          dispatch(setCredentials({ user: data.user, token: data.token }));
           // ✅ persist in localStorage
         
         } catch (err) {
@@ -82,7 +86,7 @@ export const authApi = api.injectEndpoints({
       },
     }),
     register: builder.mutation<LoginResponse, RegisterRequest>({
-      query: (body) => ({
+      query: body => ({
         url: '/users/register',
         method: 'POST',
         body,
@@ -91,9 +95,8 @@ export const authApi = api.injectEndpoints({
         try {
           const { data } = await queryFulfilled;
           // ✅ store in Redux
-          dispatch(setCredentials({ user: data, token: data.token }));
+          dispatch(setCredentials({ user: data.user, token: data.token }));
           // ✅ persist in localStorage
-          
         } catch (err) {
           console.error('Registration failed', err);
         }
@@ -106,29 +109,35 @@ export const authApi = api.injectEndpoints({
       }),
       providesTags: ['Users'],
     }),
-    fetchuserchat:builder.query<ChatRespones,string>({
-        query:(userId)=>({
-            url:`users/chats/get/${userId}`,
-            method:'GET'
-        }),
-        providesTags:["Chat"]
+    fetchuserchat: builder.query<ChatRespones, string>({
+      query: userId => ({
+        url: `users/chats/get/${userId}`,
+        method: 'GET',
+      }),
+      providesTags: ['Chat'],
     }),
-    chatReadStatus:builder.query<chatReadeStatusData,string>({
-        query:(userId)=>({
-            url:`users/chats/readeStatus/${userId}`,
-            method:'GET'
-        }),
-        providesTags:["Chat"]
+    chatReadStatus: builder.query<chatReadeStatusData, string>({
+      query: userId => ({
+        url: `users/chats/readeStatus/${userId}`,
+        method: 'GET',
+      }),
+      providesTags: ['Chat'],
     }),
-    getUserStatus:builder.query<userStatusResponseType,string>({
-        query:(userId)=>({
-            url:`users/userStatus/${userId}`,
-            method:'GET'
-        }),
-        providesTags:["Chat"]
-    })
+    getUserStatus: builder.query<userStatusResponseType, string>({
+      query: userId => ({
+        url: `users/userStatus/${userId}`,
+        method: 'GET',
+      }),
+      providesTags: ['Chat'],
+    }),
   }),
-  
 });
 
-export const { useLoginMutation, useRegisterMutation, useFetchUsersQuery,useFetchuserchatQuery ,useChatReadStatusQuery,useGetUserStatusQuery} = authApi;
+export const {
+  useLoginMutation,
+  useRegisterMutation,
+  useFetchUsersQuery,
+  useFetchuserchatQuery,
+  useChatReadStatusQuery,
+  useGetUserStatusQuery,
+} = authApi;

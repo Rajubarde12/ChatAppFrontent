@@ -1,12 +1,18 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { getAuth, removeAuth, setAuth } from '@utils/storage';
+import {
+  getAuth,
+  removeAuth,
+  setAuth,
+  setUserId,
+} from '@utils/storage';
 import { Use } from 'react-native-svg';
 
-interface User {
-  id: number;
+export interface User {
+  id: string;
   name: string;
   email: string;
   role: string;
+  avatar: string;
   status: boolean;
 }
 const { token, userId } = getAuth();
@@ -34,24 +40,24 @@ const authSlice = createSlice({
       // Extract token from user payload
       state.token = action.payload.token;
       state.userId = action.payload.user.id.toString();
-      setAuth(action.payload.token, action.payload.user.id);
+      setAuth(action.payload.token, action.payload.user);
+      setUserId(action.payload.user.id);
       state.user = {
         id: action.payload.user.id,
         name: action.payload.user.name,
         email: action.payload.user.email,
         role: action.payload.user.role,
         status: action.payload.user.status,
+        avatar: action.payload.user.avatar,
       };
     },
     logout: state => {
       state.token = null;
       state.user = null;
-      removeAuth()
+      removeAuth();
     },
-   
   },
 });
 
-export const { setCredentials, logout, } =
-  authSlice.actions;
+export const { setCredentials, logout } = authSlice.actions;
 export default authSlice.reducer;
