@@ -9,7 +9,7 @@ export const setToken = (token: string) => storage.set('token', token);
 export const getToken = () => storage.getString('token');
 export const removeToken = () => storage.delete('token');
 export const setUserId = (userId: string) =>{
-  Alert.alert('is',userId)
+
   storage.set('userId', userId.toString());
 }
 export const getUserId = () => storage.getString('userId');

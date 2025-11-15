@@ -1,8 +1,23 @@
 import { IUser } from 'src/types/user';
 import { api } from '../../api';
-import { setCredentials } from '../auth/authSlice';
+import { setCredentials, User } from '../auth/authSlice';
 import { ChatMessage } from 'src/types/chat';
 import { UserStatusType } from '@utils/socket';
+import { CountryCode } from 'react-native-country-picker-modal';
+export interface CountryMetaResponse {
+  message: string;
+  status: boolean;
+  data: {
+    countryCode: string;
+    countryName: string;
+    expectedExample: {
+      country: CountryCode;
+      countryCallingCode: string;
+      nationalNumber: string;
+      number: string;
+    };
+  };
+}
 
 interface LoginRequest {
   email: string;
@@ -19,13 +34,13 @@ export interface user {
   email: string;
   role: string;
   avatar: string;
-  status:boolean
+  status: boolean;
 }
 
 interface LoginResponse {
-  message:string,
-  token:string,
-  user:user
+  message: string;
+  token: string;
+  user: user;
   //   tokenType: string;
 }
 export interface IUsersResponse {
@@ -63,6 +78,11 @@ export interface chatReadeStatusData {
   status: true | false;
   message: string;
 }
+export interface userProfileResponseType {
+  user: User;
+  message: string;
+  status: boolean;
+}
 
 export const authApi = api.injectEndpoints({
   endpoints: builder => ({
@@ -75,11 +95,10 @@ export const authApi = api.injectEndpoints({
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-        
+
           // ✅ store in Redux
           dispatch(setCredentials({ user: data.user, token: data.token }));
           // ✅ persist in localStorage
-        
         } catch (err) {
           console.error('Login failed', err);
         }
@@ -130,6 +149,20 @@ export const authApi = api.injectEndpoints({
       }),
       providesTags: ['Chat'],
     }),
+    getUserProfile: builder.query<userProfileResponseType, void>({
+      query: () => ({
+        url: 'users/profile',
+        method: 'GET',
+      }),
+      providesTags: ['User'],
+    }),
+    getCountryMeta: builder.query<CountryMetaResponse, void>({
+      query: () => ({
+        url: 'users/detectCountryAndPhoneMeta',
+        method: 'GET',
+      }),
+      // providesTags:[""]
+    }),
   }),
 });
 
@@ -140,4 +173,6 @@ export const {
   useFetchuserchatQuery,
   useChatReadStatusQuery,
   useGetUserStatusQuery,
+  useGetUserProfileQuery,
+  useGetCountryMetaQuery
 } = authApi;

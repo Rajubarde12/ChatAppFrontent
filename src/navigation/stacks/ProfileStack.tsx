@@ -1,13 +1,13 @@
 import React from 'react';
 import { Platform } from 'react-native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import ProfileScreen from '@screens/ProfileScreen';
 
 type ProfileStackParamList = {
   ProfileMain: undefined;
 };
 
-const Stack = createNativeStackNavigator<ProfileStackParamList>();
+const Stack = createStackNavigator<ProfileStackParamList>();
 
 const ProfileStack: React.FC = () => {
   return (

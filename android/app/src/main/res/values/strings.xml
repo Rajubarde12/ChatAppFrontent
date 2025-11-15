@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">ZBWAScanner</string>
+    <string name="StallionProjectId">6909f803d29ccf636d720c30</string>
+  <string name="StallionAppToken">spb_GxXTZvVmom2y78qypwCoFyPXk4u34V1J7HTc692ZYp</string>
 </resources>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Platform } from 'react-native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import HomeScreen from '@screens/HomeScreen';
 import DetailsScreen from '@screens/DetailsScreen';
 
@@ -15,7 +15,7 @@ export type HomeStackParamList = {
   UserListScreen: undefined;
 };
 
-const Stack = createNativeStackNavigator<HomeStackParamList>();
+const Stack = createStackNavigator<HomeStackParamList>();
 
 const HomeStack: React.FC = () => {
   return (
