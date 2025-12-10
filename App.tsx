@@ -19,7 +19,7 @@ import { Provider } from 'react-redux';
 import { store } from 'src/app/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import notifee, { AndroidImportance } from '@notifee/react-native';
-import { withStallion } from 'react-native-stallion';
+
 import { useStallionUpdate } from "react-native-stallion";
 
 
@@ -77,8 +77,7 @@ function App() {
       offSocketNotification();
     };
   }, []);
-  const { isRestartRequired, currentlyRunningBundle, newReleaseBundle } =
-  useStallionUpdate();
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
       <StatusBar barStyle={'dark-content'} />
@@ -93,4 +92,4 @@ function App() {
   );
 }
 
-export default withStallion(App);
+export default App;
