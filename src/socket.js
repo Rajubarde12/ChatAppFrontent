@@ -79,7 +79,6 @@ class SocketService {
 
   updateSenderToMessageRead = receiverId => {
     if (!this.socket) return;
-
     this.socket.emit('readMessage', { receiverId });
   };
   onGetReadMessagesId = (callback = () => {}) => {
@@ -90,6 +89,18 @@ class SocketService {
     if (!this.socket) return;
     else this.socket.off('readMessagesid', callback);
   };
+
+  onUserStatusChanged = (callback = () => {}) => {
+    if (!this.socket) return;
+
+    this.socket.on('userStatusChanged', callback);
+  };
+
+  offUserStatusChanged = (callback = () => {}) => {
+    if (!this.socket) return;
+    this.socket.off('userStatusChanged', callback);
+  };
+ 
 }
 
 export default new SocketService();

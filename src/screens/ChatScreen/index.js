@@ -135,23 +135,41 @@ const ChatScreen = ({ route }) => {
     setMessages(prev => [...prev, msg]);
     SocketService.updateSenderToMessageRead(receiverId);
   };
-   const handleReadIds = (ids) => {
-      console.log('🔁 read ids:', ids);
-      setMessages(prev =>
-        prev.map(p => (ids.includes(p.id) ? { ...p, isRead: true } : p)),
-      );
-    };
+  const handleReadIds = ids => {
+    console.log("this is ides",ids);
+    
+    if (!ids) return;
+    setMessages(prev =>
+      prev.map(p => (ids?.includes(p?.id) ? { ...p, isRead: true } : p)),
+    );
+  };
 
-
+  const handleUserStatus = data => {
+    if (!data) return;
+    if (data?.userId === receiverId) {
+      if (data?.undeliveredIds?.length > 0) {
+        setMessages(prev =>
+          prev.map(p =>
+            data?.undeliveredIds.includes(p.id)
+              ? { ...p, isDelivered: true }
+              : p,
+          ),
+        );
+      }
+      // setIsOnline(data);
+    }
+  };
   useEffect(() => {
     SocketService.onMessageSent(handleMessageSent);
     SocketService.onReceiveMessage(handleReciveMessage);
-    SocketService.onGetReadMessagesId(handleReadIds)
-
+    SocketService.onGetReadMessagesId(handleReadIds);
+    SocketService.onUserStatusChanged(handleUserStatus);
+    SocketService.updateSenderToMessageRead(receiverId)
     return () => {
       SocketService.offMessageSent(handleMessageSent);
       SocketService.offReceiveMessage(handleReciveMessage);
-       SocketService.offGetReadMessagesId(handleReadIds)
+      SocketService.offGetReadMessagesId(handleReadIds);
+      SocketService.offUserStatusChanged(handleUserStatus);
     };
   }, []);
 

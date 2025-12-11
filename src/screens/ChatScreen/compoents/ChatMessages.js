@@ -100,6 +100,8 @@ const ChatMessages = ({ messages:rawMessages, currentUserId }) => {
     const isMe = item.senderId === currentUserId;
     const isNextFromSameUser = messages[index + 1]?.senderId === item.senderId;
     const isPrevFromSameUser = messages[index - 1]?.senderId === item.senderId;
+ 
+    
 
     return (
       <View>
