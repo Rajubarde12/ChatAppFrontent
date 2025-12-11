@@ -13,11 +13,48 @@ import { fonts } from './../utils/fonts';
 import AppBar from '../components/common/AppBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../components/common/Button';
+import api from '../api/axiosClient';
+import { setString } from '../utils/storage';
+import { showToast } from '../utils/showToast';
 
-const OtpScreen = ({ navigation }) => {
+const OtpScreen = ({ navigation, route }) => {
+  const { phoneNumber, countryCode } = route?.params||{};
   const otpInput = useRef(null);
   const [code, setCode] = useState('');
   const [timer, setTimer] = useState(30);
+  const [loading,setLoading]=useState(false)
+  const verifyOtp = async () => {
+    try {
+      if (!phoneNumber || phoneNumber.trim().length === 0) {
+        showToast('Please enter your mobile number');
+        return;
+      }
+      if (!code || code.trim().length === 0) {
+        showToast('Please enter the OTP');
+        return;
+      }
+
+      const data = {
+        mobileNumber: phoneNumber.trim(),
+        countryCode:countryCode || '+91',
+        otp: code.trim(),
+      };
+
+      setLoading(true);
+
+      const res = await api.post('/users/verify-otp', data);
+      setString('token', res.data?.user?.token);
+      setString('userid', res.data?.user?.id);
+      console.log(res.data?.user?.id,res.data?.user?.token),
+
+      showToast(res.data?.message || 'OTP verified successfully');
+      navigation.navigate('ProfileSetupScreen');
+    } catch (error) {
+      showToast(error.message || 'Failed to verify OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Countdown timer
   useEffect(() => {
@@ -33,8 +70,14 @@ const OtpScreen = ({ navigation }) => {
     >
       <SafeAreaView style={{ flex: 1 }}>
         <AppBar showBackIcon title="Verify Otp" />
-        <View style={{ flex: 1, paddingHorizontal: 20, alignItems: 'center',marginTop:30
-         }}>
+        <View
+          style={{
+            flex: 1,
+            paddingHorizontal: 20,
+            alignItems: 'center',
+            marginTop: 30,
+          }}
+        >
           <View>
             <Text style={styles.title}>Enter the 6-digit otp code</Text>
             <Text
@@ -43,7 +86,7 @@ const OtpScreen = ({ navigation }) => {
                 color: colors.neutral[500],
               }}
             >
-              We sent to {'{mobile nuner}'}
+              We sent to {countryCode+phoneNumber}
             </Text>
           </View>
           <View style={styles.otpWrapper}>
@@ -77,11 +120,13 @@ const OtpScreen = ({ navigation }) => {
               alignItems: 'center',
             }}
           >
-            <Button onPress={()=>{
-                navigation.navigate('ProfileSetupScreen')
-            }} title="Verify  Otp" />
+            <Button
+              onPress={() => {
+                verifyOtp();
+              }}
+              title="Verify  Otp"
+            />
           </View>
-          
         </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -131,12 +176,12 @@ const styles = StyleSheet.create({
   },
 
   timerText: {
-    color:colors.neutral[400],
+    color: colors.neutral[400],
     fontSize: 14,
   },
 
   resendText: {
-    color:colors.primary,
+    color: colors.primary,
     fontSize: 15,
     fontFamily: fonts['Lato-Regular'],
   },

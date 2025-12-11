@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackIcon } from '../icons';
 import { colors } from '../../utils/colors';
 import { fonts } from '../../utils/fonts';
+import { useNavigation } from '@react-navigation/native';
 
 const AppBar = ({
   showBackIcon = false,
@@ -11,13 +12,13 @@ const AppBar = ({
   onCancel,
   showCancle,
 }) => {
-  const insets = useSafeAreaInsets();
+const navigation=useNavigation()
 
   return (
     <View style={[styles.wrapper]}>
       <View style={styles.container}>
         {showBackIcon ? (
-          <TouchableOpacity onPress={onBack} style={styles.iconContainer}>
+          <TouchableOpacity onPress={()=>{navigation.goBack()}} style={styles.iconContainer}>
             <BackIcon />
           </TouchableOpacity>
         ) : (

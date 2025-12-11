@@ -6,13 +6,20 @@ import SplashLogo from '../components/splash/SplashLogo';
 import Tagline from '../components/splash/Tagline';
 import { styles } from '../styles/theme';
 import { colors, lightTheme, darkTheme } from '../utils/colors';
+import { getString } from '../utils/storage';
 
 const SplashScreen = ({ navigation }) => {
   const colorScheme = useColorScheme();
   const theme = true ? darkTheme : lightTheme;
   useEffect(() => {
+    const token = getString('token');
     setTimeout(() => {
-      navigation.replace('CountrySelectionScreen');
+      if (token) {
+        navigation.replace('ProfileSetupScreen');
+        return;
+      } else {
+        navigation.replace('CountrySelectionScreen');
+      }
     }, 2000);
   });
   return (
