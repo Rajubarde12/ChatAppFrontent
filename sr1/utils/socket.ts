@@ -75,7 +75,7 @@ export const sendMessage = (data: {
 
 export const onReceiveMessage = (callback: (msg: any) => void) => {
   const s = getSocket();
-  s.off("newMessage", callback); // avoid duplicates
+  s.off("newMessage", callback);
   s.on("newMessage", callback);
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   KeyboardAvoidingView,
   StyleSheet,
@@ -21,18 +21,25 @@ import Camera from './../assets/svgIcon/camera.svg';
 import Gallery from './../assets/svgIcon/gallary.svg';
 import Add from './../assets/svgIcon/add.svg';
 import Button from '../components/common/Button';
-import { API_URL } from '../constants';
+import { API_URL, mainUrl } from '../constants';
 import { showToast } from '../utils/showToast';
 import { getString } from '../utils/storage';
 import api from '../api/axiosClient';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchUserProfile } from '../redux/reducers';
 
 const ProfileSetupScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
+  const dispatch = useDispatch();
   const [bio, setBio] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(false);
-
+  const { userProfile } = useSelector(state => state.app);
   const actionSheetRef = useRef();
+  useEffect(() => {
+    setFullName(userProfile?.name);
+    setBio(userProfile?.bio);
+  }, [userProfile]);
 
   const showActionSheet = () => {
     actionSheetRef.current.show();
@@ -119,32 +126,32 @@ const ProfileSetupScreen = ({ navigation }) => {
       );
 
       if (response.data.status) {
-        showToast(response.data?.message)
+        showToast(response.data?.message);
       } else {
-        showToast(response.data?.message)
+        showToast(response.data?.message);
       }
     } catch (error) {
-       showToast(error?.response?.data?.message||"Someting went wrong")
+      showToast(error?.response?.data?.message || 'Someting went wrong');
     } finally {
       setLoading(false);
     }
   };
-const updateUserProfile=async()=>{
-  try {
-     const data={
-      name:fullName,
-      bio:bio
-     }
-     const response=await api.post('/users/profile/update',data)
-     if(response.data.status){
-      showToast(response.data.message)
-     }
-  } catch (error) {
-    showToast(error?.message||"Something went wrong")
-    
-  }
-}
-
+  const updateUserProfile = async () => {
+    try {
+      const data = {
+        name: fullName,
+        bio: bio,
+      };
+      const response = await api.post('/users/profile/update', data);
+      if (response.data.status) {
+        showToast(response.data.message);
+        dispatch(fetchUserProfile());
+        navigation.reset({index:0,routes:[{name:"HomeScreen"}]})
+      }
+    } catch (error) {
+      showToast(error?.message || 'Something went wrong');
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -168,9 +175,12 @@ const updateUserProfile=async()=>{
                 // overflow: 'hidden',
               }}
             >
-              {profileImage?.uri ? (
+              {profileImage?.uri || userProfile?.avatar ? (
                 <Image
-                  source={{ uri: profileImage?.uri }}
+                  source={{
+                    uri:
+                      profileImage?.uri ?? `${mainUrl}/${userProfile?.avatar}`,
+                  }}
                   style={{ height: 90, width: 90, borderRadius: 50 }}
                 />
               ) : (
@@ -198,7 +208,7 @@ const updateUserProfile=async()=>{
             <Text style={styles.label}>Full Name</Text>
             <Input
               value={fullName}
-              onChangeText={setFullName}
+              setValue={setFullName}
               placeholder="Enter full name"
             />
           </View>
@@ -207,7 +217,7 @@ const updateUserProfile=async()=>{
             <Text style={styles.label}>About (Optional)</Text>
             <Input
               value={bio}
-              onChangeText={setBio}
+              setValue={setBio}
               placeholder="What's on your mind?"
             />
           </View>
@@ -222,7 +232,9 @@ const updateUserProfile=async()=>{
 
           <View style={styles.bottomContainer}>
             <Button
-              onPress={() => {updateUserProfile()}}
+              onPress={() => {
+                updateUserProfile();
+              }}
               title={loading ? 'Updating...' : 'Continue'}
             />
             <Text style={styles.skipText}>Skip for now</Text>

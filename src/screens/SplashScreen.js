@@ -15,7 +15,7 @@ const SplashScreen = ({ navigation }) => {
     const token = getString('token');
     setTimeout(() => {
       if (token) {
-        navigation.replace('ProfileSetupScreen');
+        navigation.replace('HomeScreen');
         return;
       } else {
         navigation.replace('CountrySelectionScreen');
