@@ -16,10 +16,11 @@ import {
   CameraIcon,
 } from './SvgIconsPlaceholder';
 import { colors } from '../../../utils/colors';
+import MediaActionSheet from './MediaActionSheet';
 
 
 
-const ChatInput = ({ onSendMessage, onSendMedia }) => {
+const ChatInput = ({ onSendMessage, onSendMedia,onCameraClick }) => {
   const [inputText, setInputText] = useState('');
 
   const handleSend = () => {
@@ -28,6 +29,7 @@ const ChatInput = ({ onSendMessage, onSendMedia }) => {
       setInputText('');
     }
   };
+  const [visible,setVisible]=useState(false)
 
   const isTextEmpty = inputText.trim().length === 0;
 
@@ -57,10 +59,10 @@ const ChatInput = ({ onSendMessage, onSendMedia }) => {
           {/* Right Attachment Icons (Conditional) */}
           {isTextEmpty && (
             <View style={styles.attachmentContainer}>
-              <TouchableOpacity style={styles.iconButton} onPress={onSendMedia}>
+              <TouchableOpacity  style={styles.iconButton} onPress={onSendMedia}>
                 <ClipIcon />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.iconButton, { marginRight: 4 }]}>
+              <TouchableOpacity onPress={()=>{onCameraClick()}} style={[styles.iconButton, { marginRight: 4 }]}>
                 <CameraIcon />
               </TouchableOpacity>
             </View>
@@ -77,6 +79,7 @@ const ChatInput = ({ onSendMessage, onSendMedia }) => {
           {isTextEmpty ? <MicIcon /> : <SendIcon />}
         </TouchableOpacity>
       </View>
+  
     </KeyboardAvoidingView>
   );
 };
@@ -99,7 +102,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     paddingHorizontal: 8,
     marginRight: 8,
-    maxHeight: 120, // Should grow up to this height
+    maxHeight: 120, 
     overflow: 'hidden',
     paddingVertical: 8,
   },
@@ -125,7 +128,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#00a884', // WhatsApp Teal/Green FAB color
+    backgroundColor: colors.primary, // WhatsApp Teal/Green FAB color
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4, // Aligns button visually with input area

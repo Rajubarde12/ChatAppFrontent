@@ -100,7 +100,23 @@ class SocketService {
     if (!this.socket) return;
     this.socket.off('userStatusChanged', callback);
   };
- 
+  onRefressUserList = (callback = () => {}) => {
+    if (!this.socket) return;
+    this.socket.on('refreshUserList', callback);
+  };
+  offRefressUserList = (callback = () => {}) => {
+    if (!this.socket) return;
+    this.socket.off('refreshUserList', callback);
+  };
+  userListOpened = () => {
+    if (!this.socket) return;
+    this.socket.emit('userListOpened');
+  };
+
+  userListClosed = () => {
+    if (!this.socket) return;
+    this.socket.emit('userListClosed');
+  };
 }
 
 export default new SocketService();

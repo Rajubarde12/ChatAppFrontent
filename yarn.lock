@@ -1745,10 +1745,10 @@
     prompts "^2.4.2"
     semver "^7.5.2"
 
-"@react-native-documents/picker@^11.0.0":
-  version "11.0.0"
-  resolved "https://registry.npmjs.org/@react-native-documents/picker/-/picker-11.0.0.tgz"
-  integrity sha512-SyP4j88HyyHOUA/N5UGsuf5Ij7BURHSPbZ7F12yjCNVwjXkeFJcFzyxkOGbgNQs9U5b88TgoQDTyjvmYNXYjJg==
+"@react-native-documents/picker@^11.0.3":
+  version "11.0.3"
+  resolved "https://registry.npmjs.org/@react-native-documents/picker/-/picker-11.0.3.tgz"
+  integrity sha512-q+vQNT1NtZcFGwsDpTwMKNNcgOEq6foFDGlPQVt8H7KaEjCjC+wTGdXuVSe8JJr2uO9xZR6kJ7aRHReZ4XDRBw==
 
 "@react-native/assets-registry@0.81.4":
   version "0.81.4"
@@ -2891,6 +2891,11 @@ bare-events@^2.7.0:
   version "2.8.1"
   resolved "https://registry.npmjs.org/bare-events/-/bare-events-2.8.1.tgz"
   integrity sha512-oxSAxTS1hRfnyit2CL5QpAOS5ixfBjj6ex3yTNvXyY/kE719jQ/IjuESJBK2w5v4wwQRAHGseVJXx9QBYOtFGQ==
+
+base-64@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.npmjs.org/base-64/-/base-64-0.1.0.tgz"
+  integrity sha512-Y5gU45svrR5tI2Vt/X9GPd3L0HNIKzGu202EjxrXMpuc2V2CiKgemAbUUsqYmZJvPtCXoUKjNZwBJzsNScUbXA==
 
 base64-js@^1.3.1, base64-js@^1.5.1:
   version "1.5.1"
@@ -4872,7 +4877,7 @@ internal-slot@^1.1.0:
     hasown "^2.0.2"
     side-channel "^1.1.0"
 
-invariant@^2.2.4:
+invariant@^2.2.4, invariant@2.2.4:
   version "2.2.4"
   resolved "https://registry.npmjs.org/invariant/-/invariant-2.2.4.tgz"
   integrity sha512-phJfQVBuaJM5raOpJjSfkiD6BpbCE4Ns//LaXl6wGYtUBY83nWS6Rf9tXm2e8VaK60JEjYldbPif/A2B1C2gNA==
@@ -6937,6 +6942,11 @@ react-native-actionsheet@^2.4.2:
   resolved "https://registry.npmjs.org/react-native-actionsheet/-/react-native-actionsheet-2.4.2.tgz"
   integrity sha512-DBoWIvVwuWXuptF4t46pBqkFxaUxS+rsIdHiA05t0n4BdTIDV2R4s9bLEUVOGzb94D7VxIamsXZPA/3mmw+SXg==
 
+react-native-contacts@^8.0.7:
+  version "8.0.7"
+  resolved "https://registry.npmjs.org/react-native-contacts/-/react-native-contacts-8.0.7.tgz"
+  integrity sha512-9JyH+3MXZcOD1+Lm+kl1DeQzT24ayZ//LonTSZM2cln66mHgC2MzW1wBQAJ7EL9eu5NSjSav4c4BIWuOsods6Q==
+
 react-native-country-picker-modal@^2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/react-native-country-picker-modal/-/react-native-country-picker-modal-2.0.0.tgz"
@@ -6961,6 +6971,14 @@ react-native-event-source@^1.1.0:
   resolved "https://registry.npmjs.org/react-native-event-source/-/react-native-event-source-1.1.0.tgz"
   integrity sha512-CAs76IW8kTrdy0okfV2KPopm7E9TL0uNAR+SRrN7iZ/ii0zBeHWuhD4Q2F8gRKvmkrEtCZ6uwnfYL2TFmK0QZg==
 
+react-native-fs@^2.20.0:
+  version "2.20.0"
+  resolved "https://registry.npmjs.org/react-native-fs/-/react-native-fs-2.20.0.tgz"
+  integrity sha512-VkTBzs7fIDUiy/XajOSNk0XazFE9l+QlMAce7lGuebZcag5CnjszB+u4BdqzwaQOdcYb5wsJIsqq4kxInIRpJQ==
+  dependencies:
+    base-64 "^0.1.0"
+    utf8 "^3.0.0"
+
 react-native-gesture-handler@*, react-native-gesture-handler@^2.28.0, "react-native-gesture-handler@>= 2.0.0":
   version "2.28.0"
   resolved "https://registry.npmjs.org/react-native-gesture-handler/-/react-native-gesture-handler-2.28.0.tgz"
@@ -6969,6 +6987,11 @@ react-native-gesture-handler@*, react-native-gesture-handler@^2.28.0, "react-nat
     "@egjs/hammerjs" "^2.0.17"
     hoist-non-react-statics "^3.3.0"
     invariant "^2.2.4"
+
+react-native-get-location@^6.0.1:
+  version "6.0.1"
+  resolved "https://registry.npmjs.org/react-native-get-location/-/react-native-get-location-6.0.1.tgz"
+  integrity sha512-7AiDmSZFWwNNFXcst0U9Sjo3rl8b6UJ0zYE9KWB617/7xh/wbmDel1Kz7iGER0sjLfji4po4VnNLKL6m74dx8A==
 
 react-native-image-picker@^8.2.1:
   version "8.2.1"
@@ -7056,6 +7079,11 @@ react-native-syntax-highlighter@^2.1.0:
   dependencies:
     react-syntax-highlighter "^6.0.4"
 
+react-native-video@^6.18.0:
+  version "6.18.0"
+  resolved "https://registry.npmjs.org/react-native-video/-/react-native-video-6.18.0.tgz"
+  integrity sha512-9BjAtAh1uGq6h/GNCCh5yzb/iI9qJHuflwNGExyhoUxbhPD1s+15h+CdpJ2MKKJTXw6J7w+nQOp1Ywa54R8w7Q==
+
 react-native-web@*, react-native-web@0.9.x:
   version "0.9.13"
   resolved "https://registry.npmjs.org/react-native-web/-/react-native-web-0.9.13.tgz"
@@ -7071,6 +7099,14 @@ react-native-web@*, react-native-web@0.9.x:
     normalize-css-color "^1.0.2"
     prop-types "^15.6.0"
     react-timer-mixin "^0.13.4"
+
+react-native-webview@^13.16.0:
+  version "13.16.0"
+  resolved "https://registry.npmjs.org/react-native-webview/-/react-native-webview-13.16.0.tgz"
+  integrity sha512-Nh13xKZWW35C0dbOskD7OX01nQQavOzHbCw9XoZmar4eXCo7AvrYJ0jlUfRVVIJzqINxHlpECYLdmAdFsl9xDA==
+  dependencies:
+    escape-string-regexp "^4.0.0"
+    invariant "2.2.4"
 
 react-native-worklets@>=0.5.0, react-native-worklets@0.6.0:
   version "0.6.0"
@@ -7089,7 +7125,7 @@ react-native-worklets@>=0.5.0, react-native-worklets@0.6.0:
     convert-source-map "^2.0.0"
     semver "7.7.2"
 
-react-native@*, "react-native@>= 0.61.5", react-native@>=0.59, react-native@>=0.59.0, react-native@>=0.79.0, react-native@0.81.4:
+react-native@*, "react-native@>= 0.61.5", react-native@>=0.59, react-native@>=0.59.0, react-native@>=0.71, react-native@>=0.79.0, react-native@0.81.4:
   version "0.81.4"
   resolved "https://registry.npmjs.org/react-native/-/react-native-0.81.4.tgz"
   integrity sha512-bt5bz3A/+Cv46KcjV0VQa+fo7MKxs17RCcpzjftINlen4ZDUl0I6Ut+brQ2FToa5oD0IB0xvQHfmsg2EDqsZdQ==
@@ -8289,6 +8325,11 @@ use-sync-external-store@^1.5.0:
   version "1.5.0"
   resolved "https://registry.npmjs.org/use-sync-external-store/-/use-sync-external-store-1.5.0.tgz"
   integrity sha512-Rb46I4cGGVBmjamjphe8L/UnvJD+uPPtTkNvX5mZgqdbavhI4EbgIWJiIHXJ8bc/i9EQGPRh4DwEURJ552Do0A==
+
+utf8@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.npmjs.org/utf8/-/utf8-3.0.0.tgz"
+  integrity sha512-E8VjFIQ/TyQgp+TZfS6l8yp/xWppSAHzidGiRrqe4bK4XP9pTRyKFgGJpO3SN7zdX4DeomTrwaseCHovfpFcqQ==
 
 util-deprecate@^1.0.1, util-deprecate@~1.0.1:
   version "1.0.2"

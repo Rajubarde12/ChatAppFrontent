@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { colors } from '../../utils/colors.js';
 import RenderHeader from './compoents/Header.js';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,135 +9,67 @@ import SocketService from '../../socket.js';
 import { uploadFile } from '../../helper';
 import { useEffect, useState } from 'react';
 import api from '../../api/axiosClient.js';
-
-const sampleMessages = [
-  // --- NEWEST MESSAGE (Bottom of screen) ---
-  {
-    id: '1',
-    text: 'Okay, sounds like a plan! 👍',
-    time: '10:42 AM',
-    senderId: 'me',
-    status: 'pending', // Clock icon
-    isNewDay: false,
-  },
-  {
-    id: '2',
-    text: 'I will send the documents in a bit.',
-    time: '10:41 AM',
-    senderId: 'me',
-    status: 'sent', // Single Tick
-    isNewDay: false,
-  },
-  {
-    id: '3',
-    text: 'That works for me.',
-    time: '10:40 AM',
-    senderId: 'user2',
-    status: '', // Received messages don't need status
-    isNewDay: false,
-  },
-  {
-    id: '4',
-    text: 'What do you think about meeting at 5 PM?',
-    time: '10:38 AM',
-    senderId: 'user2',
-    status: '',
-    isNewDay: false,
-  },
-  {
-    id: '5',
-    text: 'Here is the photo I was talking about. We hiked for about 4 hours to get to this spot! 🏔️',
-    time: '10:35 AM',
-    senderId: 'me',
-    status: 'delivered', // Double Grey Tick
-    image:
-      'https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-    isNewDay: false,
-  },
-  {
-    id: '6',
-    text: 'Wow! That view is stunning.',
-    time: '10:32 AM',
-    senderId: 'user2',
-    status: '',
-    isNewDay: false,
-  },
-  // --- LOGIC: The message BELOW this one (in the UI) starts "Today",
-  // so this specific message object gets the 'isNewDay' flag.
-  {
-    id: '7',
-    text: 'Hey! Are you free today?',
-    time: '09:15 AM',
-    senderId: 'user2',
-    status: '',
-    isNewDay: true,
-    dateHeader: 'Today',
-  },
-
-  // --- YESTERDAY'S MESSAGES ---
-  {
-    id: '8',
-    text: 'Great, talk to you then.',
-    time: '8:45 PM',
-    senderId: 'me',
-    status: 'read', // Blue Double Tick
-    isNewDay: false,
-  },
-  {
-    id: '9',
-    text: 'I can call you tomorrow morning.',
-    time: '8:44 PM',
-    senderId: 'user2',
-    status: '',
-    isNewDay: false,
-  },
-  {
-    id: '10',
-    text: 'No worries at all.',
-    time: '8:43 PM',
-    senderId: 'me',
-    status: 'read',
-    isNewDay: false,
-  },
-  {
-    id: '11',
-    text: 'Sorry I missed your call!',
-    time: '8:42 PM',
-    senderId: 'user2',
-    status: '',
-    isNewDay: true,
-    dateHeader: 'Yesterday',
-  },
-];
+import MediaActionSheet from './compoents/MediaActionSheet.js';
+import { openCamera } from './helper/mediaActions.js';
+import { normalizeMedia } from '../../utils/helper/medialHelper';
+import FilePreviewModal from './compoents/FIlePriewModal.js';
 
 const ChatScreen = ({ route }) => {
   const { userProfile } = useSelector(state => state.app);
+  const [isonLine, setIsOnline] = useState(null);
   const currentUserId = userProfile?.id;
   const { user } = route.params || {};
   const receiverId = user?.id;
   const [messages, setMessages] = useState([]);
+  const [medivisible, setMedivisible] = useState(false);
+  const [attachments, setAtachments] = useState(null);
+  const [size, setSize] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [messageLoagin, setMessageLoading] = useState(false);
   const getChatBetweenUsers = async () => {
     try {
+      setMessageLoading(true);
       const respose = await api.get(`/users/chats/get/${receiverId}`);
       if (respose.data.status) {
         setMessages(respose.data.messages);
+      }
+    } catch (error) {
+    } finally {
+      setMessageLoading(false);
+    }
+  };
+  const getUserStatus = async () => {
+    try {
+      const respose = await api.get(`/users/userStatus/${receiverId}`);
+      if (respose.data.status) {
+        setIsOnline(respose.data.data);
       }
     } catch (error) {}
   };
   useEffect(() => {
     getChatBetweenUsers();
+    getUserStatus();
   }, [receiverId]);
-  const handleMessageSent = msg => {
-    console.log('✅ message sent event:', msg);
-    setMessages(prev => [...prev, msg]);
+  // const handleMessageSent = msg => {
+  //   console.log("mees",msg)
+  //   setMessages(prev => [...prev, msg]);
+  // };
+  const handleMessageSent = backendMsg => {
+    setMessages(prev =>
+      prev.map(m =>
+        m.pending &&
+        m.senderId === backendMsg.senderId &&
+        m.message === backendMsg.message
+          ? { ...backendMsg, pending: false }
+          : m,
+      ),
+    );
   };
   const handleReciveMessage = msg => {
     setMessages(prev => [...prev, msg]);
     SocketService.updateSenderToMessageRead(receiverId);
   };
   const handleReadIds = ids => {
-    console.log("this is ides",ids);
-    
     if (!ids) return;
     setMessages(prev =>
       prev.map(p => (ids?.includes(p?.id) ? { ...p, isRead: true } : p)),
@@ -156,7 +88,7 @@ const ChatScreen = ({ route }) => {
           ),
         );
       }
-      // setIsOnline(data);
+      setIsOnline(data);
     }
   };
   useEffect(() => {
@@ -164,7 +96,7 @@ const ChatScreen = ({ route }) => {
     SocketService.onReceiveMessage(handleReciveMessage);
     SocketService.onGetReadMessagesId(handleReadIds);
     SocketService.onUserStatusChanged(handleUserStatus);
-    SocketService.updateSenderToMessageRead(receiverId)
+    SocketService.updateSenderToMessageRead(receiverId);
     return () => {
       SocketService.offMessageSent(handleMessageSent);
       SocketService.offReceiveMessage(handleReciveMessage);
@@ -173,27 +105,127 @@ const ChatScreen = ({ route }) => {
     };
   }, []);
 
-  const handleChatSend = async message => {
-    let file = '';
-    if (false) {
-      const files = await uploadFile('chat', attachments, { tk: 12 });
-      file = files?.fileUrl;
-    }
-    SocketService.sendMessage({
-      receiverId: receiverId || '',
-      message: message || '',
+  const createStaticMessage = ({ senderId, receiverId, message }) => {
+    return {
+      id: Date.now(), // unique & stable ID
+      senderId,
+      receiverId,
+      message,
       messageType: 'text',
-      attachments: file ? [file] : null,
-    });
+      isRead: false,
+      isDelivered: false,
+      attachments: null,
+      chatId: null,
+      pending: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  };
+
+  const handleChatSend = async message => {
+    try {
+      const msg = createStaticMessage({
+        senderId: currentUserId,
+        receiverId: receiverId,
+        message,
+      });
+      console.log('mees', msg);
+      setMessages(prev => [...prev, msg]);
+
+      setLoading(true);
+
+      let file = '';
+      let messageType = ' ';
+
+      if (attachments) {
+        const files = await uploadFile('chat', attachments, { tk: 12 });
+        file = files?.fileUrl;
+      }
+      if (attachments?.type?.startsWith('image/')) {
+        messageType = 'image';
+      } else if (attachments?.type?.startsWith('video/')) {
+        messageType = 'video';
+      } else {
+        messageType = 'file';
+      }
+
+      SocketService.sendMessage({
+        receiverId: receiverId || '',
+        message: message || '',
+        messageType: attachments ? messageType : 'text',
+        attachments: file ? [file] : null,
+      });
+      setAtachments(null);
+    } catch (error) {
+      console.log('this is erroro', error?.respose || 'sososo');
+
+      setLoading(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.container}>
-        <RenderHeader user={user} />
+        <RenderHeader isonLine={isonLine} user={user} />
+        {messageLoagin ? (
+          <View style={{ paddingTop: '70%', backgroundColor: '#0b141a' }}>
+            <ActivityIndicator size={'large'} />
+          </View>
+        ) : null}
+        <ChatMessages
+          medivisible={medivisible}
+          messages={messages}
+          currentUserId={currentUserId}
+        />
 
-        <ChatMessages messages={messages} currentUserId={currentUserId} />
-        <ChatInput onSendMessage={handleChatSend} />
+        {medivisible ? (
+          <MediaActionSheet
+            onMedifiles={async file => {
+              const normlizedFile = await normalizeMedia(file);
+              console.log('file', normlizedFile);
+              if (normlizedFile)
+                setAtachments({
+                  name: normlizedFile?.name,
+                  type: normlizedFile?.type,
+                  uri: normlizedFile?.uri,
+                });
+              setSize(file?.file?.size);
+            }}
+            onClose={() => {
+              setMedivisible(false);
+            }}
+            isVisible={medivisible}
+          />
+        ) : null}
+        <ChatInput
+          onSendMedia={() => {
+            setMedivisible(prev => !prev);
+          }}
+          onSendMessage={handleChatSend}
+          onCameraClick={async () => {
+            setMedivisible(false);
+            const file = await openCamera();
+            const normlizedFile = await normalizeMedia(file);
+            if (normlizedFile)
+              setAtachments({
+                name: normlizedFile?.name,
+                type: normlizedFile?.type,
+                uri: normlizedFile?.uri,
+              });
+            setSize(file?.file?.size);
+          }}
+        />
+        <FilePreviewModal
+          loading={loading}
+          onClose={() => {
+            setAtachments(null);
+          }}
+          visible={attachments?.uri ? true : false}
+          onSend={handleChatSend}
+          file={{ size, ...attachments }}
+        />
       </SafeAreaView>
     </View>
   );

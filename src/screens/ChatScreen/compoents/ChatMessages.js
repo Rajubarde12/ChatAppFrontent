@@ -7,65 +7,13 @@ import {
   ImageBackground,
   Image,
 } from 'react-native';
-import Svg, { Path, Circle, Polyline } from 'react-native-svg'; // Import SVG components
 import { colors } from '../../../utils/colors';
 import { formatMessageTime } from '../../../utils/timeFormattor';
 import { preprocessMessages } from '../helper';
-
-// --- SVG Icon Components ---
-
-const SingleTickIcon = ({ color = '#fff', size = 16 }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Polyline
-      points="20 6 9 17 4 12"
-      stroke={color}
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
-
-const DoubleTickIcon = ({ color = '#fff', size = 16 }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    {/* First Tick */}
-    <Polyline
-      points="20 6 9 17 4 12"
-      stroke={color}
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    {/* Second Tick (Offset) */}
-    <Polyline
-      points="20 6 9 17 4 12"
-      stroke={color}
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      transform="translate(5, -5)" // Moves the second tick slightly up-right
-      opacity={0.8}
-    />
-  </Svg>
-);
-
-const ClockIcon = ({ color = '#fff', size = 14 }) => (
-  <Svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Circle cx="12" cy="12" r="10" />
-    <Polyline points="12 6 12 12 16 14" />
-  </Svg>
-);
-
-// --- Helper Components ---
+import { mainUrl } from '../../../constants';
+import Video from 'react-native-video';
+import AttachmentBubble from './AttachmentBuuble';
+import { StatusIcon } from './StatusIcon';
 
 const DateSeparator = ({ date }) => (
   <View style={styles.dateSeparator}>
@@ -73,25 +21,7 @@ const DateSeparator = ({ date }) => (
   </View>
 );
 
-const StatusIcon = ({ status }) => {
-  if (status === 'read') {
-    return <DoubleTickIcon color="#34B7F1" size={16} />;
-  }
-
-  if (status === 'delivered') {
-    return <DoubleTickIcon color={colors.neutral[400] || '#ccc'} size={16} />;
-  }
-
-  if (status === 'sent') {
-    return <SingleTickIcon color={colors.neutral[400] || '#ccc'} size={16} />;
-  }
-  return <ClockIcon color={colors.neutral[400] || '#ccc'} size={12} />;
-};
-
-
-
-const ChatMessages = ({ messages:rawMessages, currentUserId }) => {
-
+const ChatMessages = ({ messages: rawMessages, currentUserId }) => {
   const messages = useMemo(() => {
     if (!rawMessages || rawMessages.length === 0) return [];
     return preprocessMessages(rawMessages);
@@ -100,11 +30,16 @@ const ChatMessages = ({ messages:rawMessages, currentUserId }) => {
     const isMe = item.senderId === currentUserId;
     const isNextFromSameUser = messages[index + 1]?.senderId === item.senderId;
     const isPrevFromSameUser = messages[index - 1]?.senderId === item.senderId;
- 
-    
 
     return (
-      <View>
+      <View
+        style={{
+          marginTop:
+            item?.messageType !== 'text' && item?.attachments?.length > 0
+              ? 10
+              : 0,
+        }}
+      >
         {item.isNewDay && <DateSeparator date={item.dateHeader} />}
 
         <View
@@ -114,57 +49,73 @@ const ChatMessages = ({ messages:rawMessages, currentUserId }) => {
             isNextFromSameUser ? { marginBottom: 2 } : { marginBottom: 10 },
           ]}
         >
-          <View
-            style={[
-              styles.bubble,
-              isMe ? styles.myBubble : styles.otherBubble,
-              // Corner rounding logic for grouped messages
-              isMe && isNextFromSameUser && { borderTopRightRadius: 4 },
-              isMe && isPrevFromSameUser && { borderBottomRightRadius: 4 },
-              !isMe && isNextFromSameUser && { borderTopLeftRadius: 4 },
-              !isMe && isPrevFromSameUser && { borderBottomLeftRadius: 4 },
-            ]}
-          >
-            {item.image && (
-              <Image source={{ uri: item.image }} style={styles.messageImage} />
-            )}
+          {item?.messageType !== 'text' && item?.attachments?.length > 0 ? (
+            <AttachmentBubble isMe={isMe} message={item} onPress={() => {}} />
+          ) : (
+            <View
+              style={[
+                styles.bubble,
+                isMe ? styles.myBubble : styles.otherBubble,
+                // Corner rounding logic for grouped messages
+                isMe && isNextFromSameUser && { borderTopRightRadius: 4 },
+                isMe && isPrevFromSameUser && { borderBottomRightRadius: 4 },
+                !isMe && isNextFromSameUser && { borderTopLeftRadius: 4 },
+                !isMe && isPrevFromSameUser && { borderBottomLeftRadius: 4 },
+              ]}
+            >
+              {item.messageType == 'image' && (
+                <Image
+                  source={{ uri: `${mainUrl}/${item.attachments[0]}` }}
+                  style={styles.messageImage}
+                />
+              )}
+              {item.messageType == 'video' && (
+                <Video
+                  paused
+                  source={{ uri: `${mainUrl}/${item.attachments[0]}` }}
+                  style={styles.messageImage}
+                />
+              )}
 
-            <View style={styles.contentRow}>
-              <Text
-                style={[
-                  styles.messageText,
-                  isMe ? { color: '#000' } : { color: '#e9edef' },
-                ]}
-              >
-                {item?.message}
-              </Text>
-
-              {/* Time & SVG Status */}
-              <View style={styles.metaContainer}>
+              <View style={styles.contentRow}>
                 <Text
                   style={[
-                    styles.timeText,
-                    isMe ? { color: '#e9edef' } : { color: '#8696a0' },
+                    styles.messageText,
+                    isMe ? { color: '#000' } : { color: '#e9edef' },
                   ]}
                 >
-                  {formatMessageTime(item?.createdAt)}
+                  {item?.message}
                 </Text>
-                {isMe && (
-                  <View style={{ marginLeft: 4, marginBottom: -2 }}>
-                    <StatusIcon
-                      status={
-                        item?.isRead
-                          ? 'read'
-                          : item?.isDelivered
-                          ? 'delivered'
-                          : 'sent'
-                      }
-                    />
-                  </View>
-                )}
+
+                {/* Time & SVG Status */}
+                <View style={styles.metaContainer}>
+                  <Text
+                    style={[
+                      styles.timeText,
+                      isMe ? { color: '#e9edef' } : { color: '#8696a0' },
+                    ]}
+                  >
+                    {formatMessageTime(item?.createdAt)}
+                  </Text>
+                  {isMe && (
+                    <View style={{ marginLeft: 4, marginBottom: -2 }}>
+                      <StatusIcon
+                        status={
+                          item?.isRead
+                            ? 'read'
+                            : item?.isDelivered
+                            ? 'delivered'
+                            : item?.pending
+                            ? ''
+                            : 'sent'
+                        }
+                      />
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
-          </View>
+          )}
         </View>
       </View>
     );
@@ -177,7 +128,7 @@ const ChatMessages = ({ messages:rawMessages, currentUserId }) => {
         keyExtractor={item => item.id.toString()}
         renderItem={renderItem}
         contentContainerStyle={{ paddingVertical: 12, paddingHorizontal: 10 }}
-        inverted // WhatsApp default: Scroll from bottom
+        inverted
       />
     </View>
   );
@@ -223,7 +174,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   myBubble: {
-    backgroundColor: colors.primary, // WhatsApp Dark Green
+    backgroundColor: colors.bubleColor, // WhatsApp Dark Green
     borderTopRightRadius: 0,
   },
   otherBubble: {
@@ -236,6 +187,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 4,
     resizeMode: 'cover',
+    overflow: 'hidden',
   },
   contentRow: {
     // This allows text to wrap, but if there's space, time sits on the same line

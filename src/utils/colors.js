@@ -1,6 +1,7 @@
 // utils/colors.js
 export const colors = {
   primary: '#13c8ec',
+  bubleColor:'rgba(19, 200, 236, 0.8)',
   backgroundLight: '#f6f8f8',
   backgroundDark: '#101f22',
   neutral: {

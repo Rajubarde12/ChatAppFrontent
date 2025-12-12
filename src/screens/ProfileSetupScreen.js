@@ -35,11 +35,17 @@ const ProfileSetupScreen = ({ navigation }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const { userProfile } = useSelector(state => state.app);
+ 
+  
   const actionSheetRef = useRef();
   useEffect(() => {
+    if(!userProfile){
+      dispatch(fetchUserProfile())
+    }
     setFullName(userProfile?.name);
     setBio(userProfile?.bio);
   }, [userProfile]);
+
 
   const showActionSheet = () => {
     actionSheetRef.current.show();

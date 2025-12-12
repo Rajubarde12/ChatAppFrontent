@@ -1,17 +1,44 @@
-import { FlatList, Text, View, TouchableOpacity } from 'react-native';
+import {
+  FlatList,
+  Text,
+  View,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { colors } from '../utils/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SearchIcon from '../../sr1/components/icons/SearchIcon';
 import Dots from '../assets/svgIcon/dots.svg';
 import { useDispatch, useSelector } from 'react-redux';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { fetchUsersList } from '../redux/reducers';
 import UserAvtar from '../components/common/UserAvtar';
 import { formatMessageTime } from '../utils/timeFormattor';
+import SocketService from '../socket.js';
+import { StatusIcon } from './ChatScreen/compoents/StatusIcon.js';
+import { useFocusEffect } from '@react-navigation/native';
 
 const HomeScreen = ({ navigation }) => {
   const { userLists, loading, error } = useSelector(state => state.app);
   const dispatch = useDispatch();
+
+  useFocusEffect(
+    useCallback(() => {
+      SocketService.userListOpened();
+      return () => {
+        // Screen closed
+        SocketService.userListClosed();
+      };
+    }, []),
+  );
+  useEffect(() => {
+    SocketService.onRefressUserList(() => {
+      dispatch(fetchUsersList());
+    });
+    return () => {
+      SocketService.offRefressUserList();
+    };
+  }, []);
 
   useEffect(() => {
     dispatch(fetchUsersList());
@@ -44,18 +71,44 @@ const HomeScreen = ({ navigation }) => {
               ? `${item?.countryCode}${item?.mobileNumber}`
               : item?.name}
           </Text>
-
-          <Text
+          <View
             style={{
-              color: colors.neutral[400],
-              fontSize: 13,
-              fontWeight: '400',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
               marginTop: 2,
             }}
-            numberOfLines={1}
           >
-            {item?.lastMessage?.message || 'Hey John, how are you?'}
-          </Text>
+            <StatusIcon
+              status={
+                item?.lastMessage?.isRead
+                  ? 'read'
+                  : item?.lastMessage?.isDelivered
+                  ? 'delivered'
+                  : 'sent'
+              }
+            />
+            <Text
+              style={{
+                color: colors.neutral[400],
+                fontSize: 13,
+                fontWeight: '400',
+              }}
+              numberOfLines={1}
+            >
+              {item?.lastMessage?.messageType === 'text'
+                ? item?.lastMessage?.message || 'No message'
+                : item?.lastMessage?.messageType === 'image'
+                ? '🖼️ Photo'
+                : item?.lastMessage?.messageType === 'video'
+                ? '🎥 Video'
+                : item?.lastMessage?.messageType === 'audio'
+                ? '🎧 Audio'
+                : item?.lastMessage?.messageType === 'file'
+                ? '📄 File'
+                : 'Hey John, how are you?'}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -99,7 +152,6 @@ const HomeScreen = ({ navigation }) => {
   return (
     <View style={{ flex: 1, backgroundColor: colors.backgroundDark }}>
       <SafeAreaView style={{ flex: 1 }}>
-        {/* Header */}
         <View
           style={{
             flexDirection: 'row',
@@ -133,6 +185,35 @@ const HomeScreen = ({ navigation }) => {
             />
           )}
           renderItem={renderItem}
+          ListEmptyComponent={() => {
+            if (loading) {
+              return (
+                <View
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: '30%',
+                  }}
+                >
+                  <ActivityIndicator size={'large'} />
+                </View>
+              );
+            } else {
+              return (
+                <View
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: '30%',
+                  }}
+                >
+                  <Text style={{color:"#fff",fontWeight:'500'}}>{'No users found'}</Text>
+                </View>
+              );
+            }
+          }}
         />
       </SafeAreaView>
     </View>

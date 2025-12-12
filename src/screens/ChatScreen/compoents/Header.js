@@ -9,7 +9,57 @@ import { colors } from '../../../utils/colors';
 import { mainUrl } from '../../../constants';
 import { useNavigation } from '@react-navigation/native';
 
-const RenderHeader = ({ user = null }) => {
+const formatDate = isoDate => {
+  if (!isoDate) return '';
+
+  const date = isoDate instanceof Date ? isoDate : new Date(isoDate);
+  const now = new Date();
+
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+
+  if (diffSeconds < 60) {
+    return 'Just now';
+  }
+
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+ 
+  if (diffHours < 24) {
+    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  }
+
+
+  if (diffDays === 1) {
+    return `Yesterday ${date.getHours() % 12 || 12}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')} ${date.getHours() >= 12 ? 'PM' : 'AM'}`;
+  }
+
+  if (date.getFullYear() === now.getFullYear()) {
+    const month = date.toLocaleString('default', { month: 'short' });
+    return `${date.getDate()} ${month} ${date.getHours() % 12 || 12}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')} ${date.getHours() >= 12 ? 'PM' : 'AM'}`;
+  }
+
+  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()} ${
+    date.getHours() % 12 || 12
+  }:${date.getMinutes().toString().padStart(2, '0')} ${
+    date.getHours() >= 12 ? 'PM' : 'AM'
+  }`;
+};
+
+const RenderHeader = ({ user = null, isonLine = null }) => {
   const navigation = useNavigation();
   const SAMPLE_USER = {
     id: 'user2',
@@ -40,7 +90,7 @@ const RenderHeader = ({ user = null }) => {
             : user?.name}
         </Text>
         <Text style={styles.userStatus}>
-          {true ? 'Online' : `Last seen ${SAMPLE_USER.lastSeen}`}
+         {isonLine?.isActive? 'Online':`Last Seen ${formatDate(isonLine?.lastLogin)}`}
         </Text>
       </View>
 
