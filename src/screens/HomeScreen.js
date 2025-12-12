@@ -19,14 +19,15 @@ import { StatusIcon } from './ChatScreen/compoents/StatusIcon.js';
 import { useFocusEffect } from '@react-navigation/native';
 
 const HomeScreen = ({ navigation }) => {
-  const { userLists, loading, error } = useSelector(state => state.app);
+  const { userLists, loading, error, userProfile } = useSelector(
+    state => state.app,
+  );
   const dispatch = useDispatch();
 
   useFocusEffect(
     useCallback(() => {
       SocketService.userListOpened();
       return () => {
-        // Screen closed
         SocketService.userListClosed();
       };
     }, []),
@@ -79,15 +80,17 @@ const HomeScreen = ({ navigation }) => {
               marginTop: 2,
             }}
           >
-            <StatusIcon
-              status={
-                item?.lastMessage?.isRead
-                  ? 'read'
-                  : item?.lastMessage?.isDelivered
-                  ? 'delivered'
-                  : 'sent'
-              }
-            />
+            {item?.lastMessage?.senderId == userProfile?.id ? (
+              <StatusIcon
+                status={
+                  item?.lastMessage?.isRead
+                    ? 'read'
+                    : item?.lastMessage?.isDelivered
+                    ? 'delivered'
+                    : 'sent'
+                }
+              />
+            ) : null}
             <Text
               style={{
                 color: colors.neutral[400],
@@ -209,7 +212,9 @@ const HomeScreen = ({ navigation }) => {
                     marginTop: '30%',
                   }}
                 >
-                  <Text style={{color:"#fff",fontWeight:'500'}}>{'No users found'}</Text>
+                  <Text style={{ color: '#fff', fontWeight: '500' }}>
+                    {'No users found'}
+                  </Text>
                 </View>
               );
             }

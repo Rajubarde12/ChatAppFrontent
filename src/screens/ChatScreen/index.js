@@ -66,6 +66,9 @@ const ChatScreen = ({ route }) => {
     );
   };
   const handleReciveMessage = msg => {
+      if (msg.senderId !== receiverId) {
+        return
+      }
     setMessages(prev => [...prev, msg]);
     SocketService.updateSenderToMessageRead(receiverId);
   };
@@ -129,7 +132,7 @@ const ChatScreen = ({ route }) => {
         receiverId: receiverId,
         message,
       });
-      console.log('mees', msg);
+  
       setMessages(prev => [...prev, msg]);
 
       setLoading(true);
