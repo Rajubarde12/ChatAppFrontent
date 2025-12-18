@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { colors } from '../utils/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import SearchIcon from '../../sr1/components/icons/SearchIcon';
+// import SearchIcon from '../../sr1/components/icons/SearchIcon';
 import Dots from '../assets/svgIcon/dots.svg';
 import { useDispatch, useSelector } from 'react-redux';
 import { useCallback, useEffect } from 'react';
@@ -169,7 +169,7 @@ const HomeScreen = ({ navigation }) => {
             Chats
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <SearchIcon />
+            {/* <SearchIcon /> */}
             <Dots />
           </View>
         </View>

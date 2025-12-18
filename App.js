@@ -16,6 +16,10 @@ import store from './src/redux/store';
 import { fetchUserProfile } from './src/redux/reducers';
 import HomeScreen from './src/screens/HomeScreen';
 import ChatScreen from './src/screens/ChatScreen';
+import DiscoveryScreen from './src/screens/DiscoveryScreen';
+import MatchCelebrationScreen from './src/screens/MatchScreen';
+import ChatMatchUser from './src/screens/ChatMatchUser';
+import LikesOverviewScreen from './src/screens/LikeScreen';
 
 const Stack = createStackNavigator();
 
@@ -36,7 +40,9 @@ export default function App() {
             headerShown: false,
           }}
         >
+          {/* <Stack.Screen name="DiscoveryScreen" component={LikesOverviewScreen} /> */}
           <Stack.Screen name="Splash" component={SplashScreen} />
+          
           <Stack.Screen
             name="CountrySelectionScreen"
             component={CountrySelectionScreen}

@@ -43,10 +43,9 @@ const OtpScreen = ({ navigation, route }) => {
       setLoading(true);
 
       const res = await api.post('/users/verify-otp', data);
-      setString('token', res.data?.user?.token);
+      console.log("thisisis",res)
+      setString('token', res.data?.token);
       setString('userid', res.data?.user?.id);
-      console.log(res.data?.user?.id,res.data?.user?.token),
-
       showToast(res.data?.message || 'OTP verified successfully');
       navigation.navigate('ProfileSetupScreen');
     } catch (error) {

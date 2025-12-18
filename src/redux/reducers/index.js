@@ -30,12 +30,14 @@ export const fetchUsersList = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get('/users/list');
+      console.log('response',response.data)
       if (response.data.status) {
-        return response.data.users; // 👈 assuming API returns `users` array
+        return response.data.users;
       } else {
         return rejectWithValue(response.data.message || 'Failed to fetch user list');
       }
     } catch (error) {
+         console.log('errorr',error)
       return rejectWithValue(error.message);
     }
   }
@@ -51,7 +53,7 @@ const appSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // 🧩 User Profile
+
       .addCase(fetchUserProfile.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -65,7 +67,6 @@ const appSlice = createSlice({
         state.error = action.payload || 'Something went wrong';
       })
 
-      // 🧩 User List
       .addCase(fetchUsersList.pending, (state) => {
         state.loading = true;
         state.error = null;
