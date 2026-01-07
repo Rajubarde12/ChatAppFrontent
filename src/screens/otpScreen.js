@@ -35,17 +35,17 @@ const OtpScreen = ({ navigation, route }) => {
       }
 
       const data = {
-        mobileNumber: phoneNumber.trim(),
+        mobile: phoneNumber.trim(),
         countryCode:countryCode || '+91',
         otp: code.trim(),
       };
 
       setLoading(true);
 
-      const res = await api.post('/users/verify-otp', data);
+      const res = await api.post('/verify-otp', data);
       console.log("thisisis",res)
-      setString('token', res.data?.token);
-      setString('userid', res.data?.user?.id);
+      setString('token', res.data?.access_token);
+      setString('user', JSON.stringify(res.data?.user));
       showToast(res.data?.message || 'OTP verified successfully');
       navigation.navigate('ProfileSetupScreen');
     } catch (error) {

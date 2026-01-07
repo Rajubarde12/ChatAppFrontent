@@ -1,11 +1,10 @@
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import { colors } from '../../utils/colors.js';
 import RenderHeader from './compoents/Header.js';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ChatMessages from './compoents/ChatMessages.js';
 import ChatInput from './compoents/ChatInput.js';
 import { useSelector } from 'react-redux';
-import SocketService from '../../socket.js';
 import { uploadFile } from '../../helper';
 import { useEffect, useState } from 'react';
 import api from '../../api/axiosClient.js';
@@ -13,160 +12,176 @@ import MediaActionSheet from './compoents/MediaActionSheet.js';
 import { openCamera } from './helper/mediaActions.js';
 import { normalizeMedia } from '../../utils/helper/medialHelper';
 import FilePreviewModal from './compoents/FIlePriewModal.js';
+import echo from '../../echo.js';
 
 const ChatScreen = ({ route }) => {
   const { userProfile } = useSelector(state => state.app);
-  const [isonLine, setIsOnline] = useState(null);
   const currentUserId = userProfile?.id;
   const { user } = route.params || {};
-  const receiverId = user?.id;
+  const receiverId = user?.id??user?.receiver_id;
+  console.log("this is user",user)
+
   const [messages, setMessages] = useState([]);
+  const [isonLine, setIsOnline] = useState(null);
   const [medivisible, setMedivisible] = useState(false);
   const [attachments, setAtachments] = useState(null);
   const [size, setSize] = useState(0);
   const [loading, setLoading] = useState(false);
   const [messageLoagin, setMessageLoading] = useState(false);
-  const getChatBetweenUsers = async () => {
-    try {
+ useEffect(() => {
+    const fetchChatMessages = async () => {
+      if (!user?.chat_id) return;
+
       setMessageLoading(true);
-      const respose = await api.get(`/users/chats/get/${receiverId}`);
-      if (respose.data.status) {
-        setMessages(respose.data.messages);
+      try {
+        const response = await api.get(`/user-chat-message?chat_id=${user.chat_id}`);
+        if (response.data.status && response.data.data) {
+          const normalizedMsgs = response.data.data.map(normalizeBackendMsg);
+          setMessages(normalizedMsgs);
+        }
+      } catch (error) {
+        console.log('❌ Fetch chat messages error:', error);
+      } finally {
+        setMessageLoading(false);
       }
-    } catch (error) {
-    } finally {
-      setMessageLoading(false);
-    }
-  };
-  const getUserStatus = async () => {
-    try {
-      const respose = await api.get(`/users/userStatus/${receiverId}`);
-      if (respose.data.status) {
-        setIsOnline(respose.data.data);
-      }
-    } catch (error) {}
-  };
-  useEffect(() => {
-    getChatBetweenUsers();
-    getUserStatus();
-  }, [receiverId]);
-  // const handleMessageSent = msg => {
-  //   console.log("mees",msg)
-  //   setMessages(prev => [...prev, msg]);
-  // };
-  const handleMessageSent = backendMsg => {
-    setMessages(prev =>
-      prev.map(m =>
-        m.pending &&
-        m.senderId === backendMsg.senderId &&
-        m.message === backendMsg.message
-          ? { ...backendMsg, pending: false }
-          : m,
-      ),
-    );
-  };
-  const handleReciveMessage = msg => {
-      if (msg.senderId !== receiverId) {
-        return
-      }
-    setMessages(prev => [...prev, msg]);
-    SocketService.updateSenderToMessageRead(receiverId);
-  };
-  const handleReadIds = ids => {
-    if (!ids) return;
-    setMessages(prev =>
-      prev.map(p => (ids?.includes(p?.id) ? { ...p, isRead: true } : p)),
-    );
-  };
-
-  const handleUserStatus = data => {
-    if (!data) return;
-    if (data?.userId === receiverId) {
-      if (data?.undeliveredIds?.length > 0) {
-        setMessages(prev =>
-          prev.map(p =>
-            data?.undeliveredIds.includes(p.id)
-              ? { ...p, isDelivered: true }
-              : p,
-          ),
-        );
-      }
-      setIsOnline(data);
-    }
-  };
-  useEffect(() => {
-    SocketService.onMessageSent(handleMessageSent);
-    SocketService.onReceiveMessage(handleReciveMessage);
-    SocketService.onGetReadMessagesId(handleReadIds);
-    SocketService.onUserStatusChanged(handleUserStatus);
-    SocketService.updateSenderToMessageRead(receiverId);
-    return () => {
-      SocketService.offMessageSent(handleMessageSent);
-      SocketService.offReceiveMessage(handleReciveMessage);
-      SocketService.offGetReadMessagesId(handleReadIds);
-      SocketService.offUserStatusChanged(handleUserStatus);
     };
-  }, []);
 
-  const createStaticMessage = ({ senderId, receiverId, message }) => {
-    return {
-      id: Date.now(), // unique & stable ID
-      senderId,
+    fetchChatMessages();
+  }, [user?.chat_id]);
+
+
+  const createStaticMessage = ({ senderId, receiverId, message }) => ({
+    id: Date.now(),
+    senderId,
+    receiverId,
+    message,
+    messageType: 'text',
+    isRead: false,
+    isDelivered: false,
+    attachments: null,
+    chatId: null,
+    pending: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  const normalizeBackendMsg = backendMsg => ({
+  id: backendMsg.id,
+  senderId: backendMsg.sender_id,
+  receiverId: backendMsg.receiver_id,
+  message: backendMsg.message,
+  messageType: backendMsg.message_type,
+  attachments: backendMsg.attachment ? [backendMsg.attachment] : [],
+  isRead: !!backendMsg.is_read,
+  isDelivered: !!backendMsg.is_delivered,
+  chatId: backendMsg.chat_id,
+  createdAt: backendMsg.created_at,
+  updatedAt: backendMsg.updated_at,
+  pending: false,
+});
+
+  // ✅ properly match and update pending message
+const handleMessageSent = backendMsg => {
+  const normalized = normalizeBackendMsg(backendMsg);
+  setMessages(prev => {
+    const foundIndex = prev.findIndex(
+      m =>
+        m.pending &&
+        m.senderId === normalized.senderId &&
+        m.receiverId === normalized.receiverId &&
+        m.message.trim() === normalized.message.trim()
+    );
+
+    if (foundIndex === -1) return prev; 
+
+    const updated = [...prev];
+    updated[foundIndex] = normalized;
+    return updated;
+  });
+};
+
+  useEffect(() => {
+  const channel = echo.channel('chat-channel');
+
+  channel.subscribed(() => {
+    console.log('📡 Subscribed to chat-channel');
+  });
+
+  channel.listen('.message.sent', e => {
+
+    const msg = e.data;
+    if (msg.sender_id === currentUserId) return;
+ 
+    
+    
+    if (
+      (msg.sender_id === receiverId && msg.receiver_id === currentUserId) ||
+      (msg.sender_id === currentUserId && msg.receiver_id === receiverId)
+    ) {
+      setMessages(prev => {
+        const exists = prev.some(m => m.id === msg.id);
+        if (exists) return prev;
+        return [...prev, normalizeBackendMsg(msg)];
+      });
+    }
+  });
+const normalizeBackendMsg = backendMsg => ({
+  id: backendMsg.id,
+  senderId: backendMsg.sender_id,
+  receiverId: backendMsg.receiver_id,
+  message: backendMsg.message,
+  messageType: backendMsg.message_type,
+  attachments: backendMsg.attachment ? [backendMsg.attachment] : [],
+  isRead: !!backendMsg.is_read,
+  isDelivered: !!backendMsg.is_delivered,
+  chatId: backendMsg.chat_id,
+  createdAt: backendMsg.created_at,
+  updatedAt: backendMsg.updated_at,
+  pending: false,
+});
+  channel.error(err => {
+    console.log('❌ Channel error', err);
+  });
+
+  return () => {
+    echo.leave('chat-channel');
+  };
+}, [receiverId, currentUserId]);
+
+  // ✅ send message to API
+const handleChatSend = async message => {
+  try {
+    const staticMsg = createStaticMessage({
+      senderId: currentUserId,
       receiverId,
       message,
-      messageType: 'text',
-      isRead: false,
-      isDelivered: false,
-      attachments: null,
-      chatId: null,
-      pending: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-  };
+    });
+    setMessages(prev => [...prev, staticMsg]);
+    console.log("static message",staticMsg)
 
-  const handleChatSend = async message => {
-    try {
-      const msg = createStaticMessage({
-        senderId: currentUserId,
-        receiverId: receiverId,
-        message,
+    const formData = new FormData();
+    formData.append('receiver_id', receiverId);
+    formData.append('message', message);
+    if (attachments) {
+      formData.append('attachment', {
+        uri: attachments.uri,
+        name: attachments.name,
+        type: attachments.type,
       });
-  
-      setMessages(prev => [...prev, msg]);
-
-      setLoading(true);
-
-      let file = '';
-      let messageType = ' ';
-
-      if (attachments) {
-        const files = await uploadFile('chat', attachments, { tk: 12 });
-        file = files?.fileUrl;
-      }
-      if (attachments?.type?.startsWith('image/')) {
-        messageType = 'image';
-      } else if (attachments?.type?.startsWith('video/')) {
-        messageType = 'video';
-      } else {
-        messageType = 'file';
-      }
-
-      SocketService.sendMessage({
-        receiverId: receiverId || '',
-        message: message || '',
-        messageType: attachments ? messageType : 'text',
-        attachments: file ? [file] : null,
-      });
-      setAtachments(null);
-    } catch (error) {
-      console.log('this is erroro', error?.respose || 'sososo');
-
-      setLoading(false);
-    } finally {
-      setLoading(false);
     }
-  };
+
+    const response = await api.post('/send-message', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    if (response.data?.data) {
+        console.log("messafe send api respone ",response.data?.data)
+      handleMessageSent(response.data.data);
+    }
+  } catch (error) {
+    console.log('❌ Send message error', error);
+  }
+};
+  console.log("this is messages",messages)
 
   return (
     <View style={styles.container}>
@@ -177,17 +192,13 @@ const ChatScreen = ({ route }) => {
             <ActivityIndicator size={'large'} />
           </View>
         ) : null}
-        <ChatMessages
-          medivisible={medivisible}
-          messages={messages}
-          currentUserId={currentUserId}
-        />
 
-        {medivisible ? (
+        <ChatMessages messages={messages} currentUserId={currentUserId} />
+
+        {medivisible && (
           <MediaActionSheet
             onMedifiles={async file => {
               const normlizedFile = await normalizeMedia(file);
-              console.log('file', normlizedFile);
               if (normlizedFile)
                 setAtachments({
                   name: normlizedFile?.name,
@@ -196,16 +207,13 @@ const ChatScreen = ({ route }) => {
                 });
               setSize(file?.file?.size);
             }}
-            onClose={() => {
-              setMedivisible(false);
-            }}
+            onClose={() => setMedivisible(false)}
             isVisible={medivisible}
           />
-        ) : null}
+        )}
+
         <ChatInput
-          onSendMedia={() => {
-            setMedivisible(prev => !prev);
-          }}
+          onSendMedia={() => setMedivisible(prev => !prev)}
           onSendMessage={handleChatSend}
           onCameraClick={async () => {
             setMedivisible(false);
@@ -220,12 +228,11 @@ const ChatScreen = ({ route }) => {
             setSize(file?.file?.size);
           }}
         />
+
         <FilePreviewModal
           loading={loading}
-          onClose={() => {
-            setAtachments(null);
-          }}
-          visible={attachments?.uri ? true : false}
+          onClose={() => setAtachments(null)}
+          visible={!!attachments?.uri}
           onSend={handleChatSend}
           file={{ size, ...attachments }}
         />
@@ -233,10 +240,12 @@ const ChatScreen = ({ route }) => {
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundDark,
   },
 });
+
 export default ChatScreen;

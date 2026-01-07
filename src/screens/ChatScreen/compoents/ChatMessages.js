@@ -27,7 +27,7 @@ const ChatMessages = ({ messages: rawMessages, currentUserId }) => {
     return preprocessMessages(rawMessages);
   }, [rawMessages]);
   const renderItem = ({ item, index }) => {
-    const isMe = item.senderId === currentUserId;
+    const isMe = item.senderId == currentUserId;
     const isNextFromSameUser = messages[index + 1]?.senderId === item.senderId;
     const isPrevFromSameUser = messages[index - 1]?.senderId === item.senderId;
 
@@ -125,7 +125,7 @@ const ChatMessages = ({ messages: rawMessages, currentUserId }) => {
     <View style={styles.backgroundImage} resizeMode="cover">
       <FlatList
         data={messages}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item,index)=>index.toString()}
         renderItem={renderItem}
         contentContainerStyle={{ paddingVertical: 12, paddingHorizontal: 10 }}
         inverted

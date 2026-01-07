@@ -21,13 +21,13 @@ const PhoneScreen = ({ route, navigation }) => {
       }
 
       const data = {
-        mobileNumber: phoneNumber.trim(),
-        countryCode: item?.dial || '+91', // default if not selected
+        mobile: phoneNumber.trim(),
+        // countryCode: item?.dial || '+91', // default if not selected
       };
 
       setLoading(true);
 
-      const res = await axiosClient.post('/users/send-otp', data);
+      const res = await axiosClient.post('/send-otp', data);
       console.log("riiei",res.data)
       showToast(res.data?.message || 'OTP sent successfully');
       navigation.navigate('OtpScreen', {
@@ -35,6 +35,7 @@ const PhoneScreen = ({ route, navigation }) => {
         countryCode: item?.dial,
       });
     } catch (error) {
+      console.log('errr',error)
       showToast(error.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);

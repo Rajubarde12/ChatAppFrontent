@@ -8,6 +8,8 @@ import {
   Platform,
   Image,
   Alert,
+  PermissionsAndroid,
+  ToastAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomActionSheet from '../components/ActionSheet';
@@ -21,7 +23,7 @@ import Camera from './../assets/svgIcon/camera.svg';
 import Gallery from './../assets/svgIcon/gallary.svg';
 import Add from './../assets/svgIcon/add.svg';
 import Button from '../components/common/Button';
-import { API_URL, mainUrl } from '../constants';
+import { API_URL, mainUrl, mediaUrl } from '../constants';
 import { showToast } from '../utils/showToast';
 import { getString } from '../utils/storage';
 import api from '../api/axiosClient';
@@ -35,17 +37,15 @@ const ProfileSetupScreen = ({ navigation }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const { userProfile } = useSelector(state => state.app);
- 
-  
+
   const actionSheetRef = useRef();
   useEffect(() => {
-    if(!userProfile){
-      dispatch(fetchUserProfile())
+    if (!userProfile) {
+      dispatch(fetchUserProfile());
     }
     setFullName(userProfile?.name);
-    setBio(userProfile?.bio);
+    setBio(userProfile?.about);
   }, [userProfile]);
-
 
   const showActionSheet = () => {
     actionSheetRef.current.show();
@@ -68,8 +68,40 @@ const ProfileSetupScreen = ({ navigation }) => {
       },
     },
   ];
+  const requestCameraPermission = async () => {
+  try {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+      {
+        title: "Camera Permission",
+        message: "This app needs access to your camera",
+        buttonNeutral: "Ask Me Later",
+        buttonNegative: "Cancel",
+        buttonPositive: "OK",
+      }
+    );
+
+    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+      ToastAndroid.show("Camera Permission Granted 👍", ToastAndroid.SHORT);
+      return true
+      // your logic here, e.g., open camera
+    } else {
+
+      ToastAndroid.show("Camera Permission Denied 👎", ToastAndroid.SHORT);
+      return false
+    }
+  } catch (err) {
+    console.warn(err);
+    ToastAndroid.show("Permission Error", ToastAndroid.SHORT);
+    return false
+  }
+};
 
   const openCamera = async () => {
+  const haspermission= await requestCameraPermission()
+  if(!haspermission){
+    return
+  }
     const result = await launchCamera({
       mediaType: 'photo',
       quality: 0.7,
@@ -81,11 +113,7 @@ const ProfileSetupScreen = ({ navigation }) => {
         type: result.assets[0].type,
         uri: result.assets[0]?.uri,
       });
-      handleProfileImageUpdate({
-        name: result.assets[0]?.fileName,
-        type: result.assets[0].type,
-        uri: result.assets[0]?.uri,
-      });
+     
     }
   };
 
@@ -101,11 +129,7 @@ const ProfileSetupScreen = ({ navigation }) => {
         type: result.assets[0].type,
         uri: result.assets[0]?.uri,
       });
-      handleProfileImageUpdate({
-        name: result.assets[0]?.fileName,
-        type: result.assets[0].type,
-        uri: result.assets[0]?.uri,
-      });
+     
     }
   };
 
@@ -121,7 +145,7 @@ const ProfileSetupScreen = ({ navigation }) => {
       });
 
       const response = await axios.post(
-        `${API_URL}/users/profile/updateImage`,
+        `${API_URL}/profile/updateImage`,
         formData,
         {
           headers: {
@@ -142,17 +166,51 @@ const ProfileSetupScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
+  // const updateUserProfile = async () => {
+  //   try {
+  //     const data = {
+  //       name: fullName,
+  //       bio: bio,
+  //     };
+  //     const response = await api.post('/profile/update', data);
+  //     if (response.data.status) {
+  //       showToast(response.data.message);
+  //       dispatch(fetchUserProfile());
+  //       navigation.reset({index:0,routes:[{name:"HomeScreen"}]})
+  //     }
+  //   } catch (error) {
+  //     showToast(error?.message || 'Something went wrong');
+  //   }
+  // };
+
   const updateUserProfile = async () => {
     try {
-      const data = {
-        name: fullName,
-        bio: bio,
-      };
-      const response = await api.post('/users/profile/update', data);
+      const formData = new FormData();
+
+      formData.append('name', fullName); 
+      formData.append('about', bio); // email
+      // formData.append('mobile', mobile); // mobile
+
+      // image file
+     if(profileImage?.uri){ formData.append('image', {
+        uri: profileImage?.uri,
+        name: profileImage?.name,
+        type: profileImage?.type,
+      });}
+
+      const response = await api.post('/profile/update', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
       if (response.data.status) {
         showToast(response.data.message);
         dispatch(fetchUserProfile());
-        navigation.reset({index:0,routes:[{name:"HomeScreen"}]})
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'HomeScreen' }],
+        });
       }
     } catch (error) {
       showToast(error?.message || 'Something went wrong');
@@ -181,11 +239,11 @@ const ProfileSetupScreen = ({ navigation }) => {
                 // overflow: 'hidden',
               }}
             >
-              {profileImage?.uri || userProfile?.avatar ? (
+              {profileImage?.uri || userProfile?.image ? (
                 <Image
                   source={{
                     uri:
-                      profileImage?.uri ?? `${mainUrl}/${userProfile?.avatar}`,
+                      profileImage?.uri ?? `${mediaUrl}${userProfile?.image}`,
                   }}
                   style={{ height: 90, width: 90, borderRadius: 50 }}
                 />
@@ -243,7 +301,17 @@ const ProfileSetupScreen = ({ navigation }) => {
               }}
               title={loading ? 'Updating...' : 'Continue'}
             />
-            <Text style={styles.skipText}>Skip for now</Text>
+            <Text
+              onPress={() => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'HomeScreen' }],
+                });
+              }}
+              style={styles.skipText}
+            >
+              Skip for now
+            </Text>
           </View>
         </View>
       </SafeAreaView>

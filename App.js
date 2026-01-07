@@ -5,7 +5,7 @@ import {
   DarkTheme,
 } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useColorScheme } from 'react-native';
+import { LogBox, useColorScheme } from 'react-native';
 import SplashScreen from './src/screens/SplashScreen';
 import CountrySelectionScreen from './src/screens/CountrySelectionScreen';
 import PhoneScreen from './src/screens/PhoneScren';
@@ -24,6 +24,7 @@ import LikesOverviewScreen from './src/screens/LikeScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
+  LogBox.ignoreAllLogs()
   const { dispatch } = store || {};
   const scheme = useColorScheme();
 
@@ -66,3 +67,34 @@ export default function App() {
     </Provider>
   );
 }
+
+
+// import React, { useEffect, useState } from 'react';
+// import { View, Text } from 'react-native';
+// import echo from './src/echo';
+
+
+// export default function PublicMessageListener() {
+//   const [message, setMessage] = useState(null);
+
+//   useEffect(() => {
+//     const channel = echo.channel('public-messages');
+
+//     channel.listen('.message.sent', (event) => {
+//       console.log('📩 Received:', event);
+//       setMessage(event);
+//     });
+
+//     return () => {
+//       echo.leaveChannel('public-messages');
+//     };
+//   }, []);
+
+//   return (
+//     <View>
+//       <Text>📡 Listening to Public Messages...</Text>
+//       {message && <Text>{JSON.stringify(message, null, 2)}</Text>}
+//     </View>
+//   );
+// }
+

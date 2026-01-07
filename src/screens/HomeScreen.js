@@ -1,28 +1,37 @@
+import React, { useEffect, useCallback } from 'react';
 import {
   FlatList,
   Text,
   View,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
-import { colors } from '../utils/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// import SearchIcon from '../../sr1/components/icons/SearchIcon';
-import Dots from '../assets/svgIcon/dots.svg';
 import { useDispatch, useSelector } from 'react-redux';
-import { useCallback, useEffect } from 'react';
-import { fetchUsersList } from '../redux/reducers';
+import { useFocusEffect } from '@react-navigation/native';
+import { colors } from '../utils/colors';
+import Dots from '../assets/svgIcon/dots.svg';
+import { fetchUserChats, fetchUsersList } from '../redux/reducers';
 import UserAvtar from '../components/common/UserAvtar';
 import { formatMessageTime } from '../utils/timeFormattor';
 import SocketService from '../socket.js';
 import { StatusIcon } from './ChatScreen/compoents/StatusIcon.js';
-import { useFocusEffect } from '@react-navigation/native';
 
 const HomeScreen = ({ navigation }) => {
-  const { userLists, loading, error, userProfile } = useSelector(
+  const dispatch = useDispatch();
+  const { userLists, userChats, loading, userProfile } = useSelector(
     state => state.app,
   );
-  const dispatch = useDispatch();
+
+    
+
+
+  // Separate recent chats and all users
+  const recentChats = userChats || [];
+  const allUsers = (userLists || []).filter(
+    user => !recentChats.some(chat => chat.chat_id === user.chat_id),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -32,9 +41,11 @@ const HomeScreen = ({ navigation }) => {
       };
     }, []),
   );
+
   useEffect(() => {
     SocketService.onRefressUserList(() => {
       dispatch(fetchUsersList());
+      dispatch(fetchUserChats());
     });
     return () => {
       SocketService.offRefressUserList();
@@ -43,6 +54,7 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     dispatch(fetchUsersList());
+    dispatch(fetchUserChats());
   }, [dispatch]);
 
   const renderItem = ({ item }) => (
@@ -58,7 +70,7 @@ const HomeScreen = ({ navigation }) => {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-        <UserAvtar uri={item?.avatar} size={52} />
+        <UserAvtar uri={item?.image} size={52} />
         <View style={{ marginLeft: 14, flexShrink: 1 }}>
           <Text
             style={{
@@ -68,10 +80,9 @@ const HomeScreen = ({ navigation }) => {
             }}
             numberOfLines={1}
           >
-            {item?.name === 'New User'
-              ? `${item?.countryCode}${item?.mobileNumber}`
-              : item?.name}
+            {item?.name || `${item?.mobile || 'Unknown User'}`}
           </Text>
+
           <View
             style={{
               flexDirection: 'row',
@@ -80,7 +91,7 @@ const HomeScreen = ({ navigation }) => {
               marginTop: 2,
             }}
           >
-            {item?.lastMessage?.senderId == userProfile?.id ? (
+            {item?.lastMessage?.senderId === userProfile?.id && (
               <StatusIcon
                 status={
                   item?.lastMessage?.isRead
@@ -90,7 +101,7 @@ const HomeScreen = ({ navigation }) => {
                     : 'sent'
                 }
               />
-            ) : null}
+            )}
             <Text
               style={{
                 color: colors.neutral[400],
@@ -109,7 +120,7 @@ const HomeScreen = ({ navigation }) => {
                 ? '🎧 Audio'
                 : item?.lastMessage?.messageType === 'file'
                 ? '📄 File'
-                : 'Hey John, how are you?'}
+                : 'Hey there!'}
             </Text>
           </View>
         </View>
@@ -117,11 +128,7 @@ const HomeScreen = ({ navigation }) => {
 
       <View style={{ alignItems: 'flex-end', marginLeft: 10 }}>
         <Text
-          style={{
-            color: colors.neutral[300],
-            fontSize: 12,
-            marginBottom: 5,
-          }}
+          style={{ color: colors.neutral[300], fontSize: 12, marginBottom: 5 }}
         >
           {formatMessageTime(item?.lastMessageTime) || '10:34 PM'}
         </Text>
@@ -137,13 +144,7 @@ const HomeScreen = ({ navigation }) => {
               justifyContent: 'center',
             }}
           >
-            <Text
-              style={{
-                color: '#000',
-                fontSize: 12,
-                fontWeight: 'bold',
-              }}
-            >
+            <Text style={{ color: '#000', fontSize: 12, fontWeight: 'bold' }}>
               {item?.unreadCount}
             </Text>
           </View>
@@ -152,9 +153,50 @@ const HomeScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const renderSection = (title, data) => (
+    <View style={{ marginBottom: 16 }}>
+      {data?.length > 0 && (
+        <Text
+          style={{
+            color: '#fff',
+            fontSize: 18,
+            fontWeight: '700',
+            marginHorizontal: 16,
+            marginVertical: 8,
+          }}
+        >
+          {title}
+        </Text>
+      )}
+      <FlatList
+        data={data}
+        keyExtractor={(item, index) =>
+          item.chat_id?.toString() || item.id?.toString() || index.toString()
+        }
+        renderItem={renderItem}
+        scrollEnabled={false} // scroll controlled by parent ScrollView
+        ItemSeparatorComponent={() => (
+          <View
+            style={{
+              height: 0.5,
+              backgroundColor: colors.neutral[800],
+              marginLeft: 82,
+            }}
+          />
+        )}
+        ListEmptyComponent={() =>
+          loading ? (
+            <ActivityIndicator size="large" style={{ marginTop: 20 }} />
+          ) : null
+        }
+      />
+    </View>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.backgroundDark }}>
       <SafeAreaView style={{ flex: 1 }}>
+        {/* Header */}
         <View
           style={{
             flexDirection: 'row',
@@ -168,58 +210,21 @@ const HomeScreen = ({ navigation }) => {
           <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700' }}>
             Chats
           </Text>
+          <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700' }}>
+            {userProfile?.name}
+          </Text>
+
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             {/* <SearchIcon /> */}
             <Dots />
           </View>
         </View>
 
-        <FlatList
-          data={userLists}
-          keyExtractor={(item, index) => item._id || index.toString()}
-          contentContainerStyle={{ paddingVertical: 6 }}
-          ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: 0.5,
-                backgroundColor: colors.neutral[800],
-                marginLeft: 82,
-              }}
-            />
-          )}
-          renderItem={renderItem}
-          ListEmptyComponent={() => {
-            if (loading) {
-              return (
-                <View
-                  style={{
-                    flex: 1,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: '30%',
-                  }}
-                >
-                  <ActivityIndicator size={'large'} />
-                </View>
-              );
-            } else {
-              return (
-                <View
-                  style={{
-                    flex: 1,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: '30%',
-                  }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: '500' }}>
-                    {'No users found'}
-                  </Text>
-                </View>
-              );
-            }
-          }}
-        />
+        {/* Scrollable Lists */}
+        <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
+          {renderSection('Recent Chats', recentChats)}
+          {renderSection('All Users', allUsers)}
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
