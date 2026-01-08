@@ -6,7 +6,7 @@ import ChatMessages from './compoents/ChatMessages.js';
 import ChatInput from './compoents/ChatInput.js';
 import { useSelector } from 'react-redux';
 import { uploadFile } from '../../helper';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api from '../../api/axiosClient.js';
 import MediaActionSheet from './compoents/MediaActionSheet.js';
 import { openCamera } from './helper/mediaActions.js';
@@ -16,6 +16,7 @@ import echo from '../../echo.js';
 
 const ChatScreen = ({ route }) => {
   const { userProfile } = useSelector(state => state.app);
+  const channelRef = useRef(null);
   const currentUserId = userProfile?.id;
   const { user } = route.params || {};
   const receiverId = user?.id??user?.receiver_id;
@@ -64,20 +65,29 @@ const ChatScreen = ({ route }) => {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
-  const normalizeBackendMsg = backendMsg => ({
-  id: backendMsg.id,
-  senderId: backendMsg.sender_id,
-  receiverId: backendMsg.receiver_id,
-  message: backendMsg.message,
-  messageType: backendMsg.message_type,
-  attachments: backendMsg.attachment ? [backendMsg.attachment] : [],
-  isRead: !!backendMsg.is_read,
-  isDelivered: !!backendMsg.is_delivered,
-  chatId: backendMsg.chat_id,
-  createdAt: backendMsg.created_at,
-  updatedAt: backendMsg.updated_at,
-  pending: false,
-});
+const normalizeBackendMsg = backendMsg => {
+  const safeDate = (date) => {
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? new Date() : d; // agar invalid ho to current date use karo
+  };
+
+  return {
+    id: backendMsg.id,
+    senderId: backendMsg.sender_id,
+    receiverId: backendMsg.receiver_id,
+    message: backendMsg.message,
+    messageType: backendMsg.message_type,
+    attachments: backendMsg.attachment ? [backendMsg.attachment] : [],
+    isRead: !!backendMsg.is_read,
+    isDelivered: !!backendMsg.is_delivered,
+    chatId: backendMsg.chat_id,
+    createdAt: safeDate(backendMsg.created_at).toISOString(),
+    updatedAt: safeDate(backendMsg.updated_at).toISOString(),
+    pending: false,
+  };
+};
+
+
 
   // ✅ properly match and update pending message
 const handleMessageSent = backendMsg => {
@@ -85,13 +95,11 @@ const handleMessageSent = backendMsg => {
   setMessages(prev => {
     const foundIndex = prev.findIndex(
       m =>
-        m.pending &&
-        m.senderId === normalized.senderId &&
-        m.receiverId === normalized.receiverId &&
-        m.message.trim() === normalized.message.trim()
+        (m.pending && m.message.trim() === normalized.message.trim() && m.senderId === normalized.senderId) ||
+        m.id === normalized.id
     );
 
-    if (foundIndex === -1) return prev; 
+    if (foundIndex === -1) return [...prev, normalized];
 
     const updated = [...prev];
     updated[foundIndex] = normalized;
@@ -99,45 +107,37 @@ const handleMessageSent = backendMsg => {
   });
 };
 
+
   useEffect(() => {
+    //  if (channelRef.current) return;
   const channel = echo.channel('chat-channel');
+   channelRef.current = channel;
 
   channel.subscribed(() => {
     console.log('📡 Subscribed to chat-channel');
   });
 
-  channel.listen('.message.sent', e => {
+channel.listen('.message.sent', e => {
+  const msg = e.data;
+  if (msg.sender_id === currentUserId) return;
+  console.log("exits",msg)
+  let normalized=null
+try{
+   normalized = normalizeBackendMsg(msg);
+}catch(err){
+  Alert.alert('errr');
+  console.log("exits1",err)
+}
+   console.log("exits",normalized)
 
-    const msg = e.data;
-    if (msg.sender_id === currentUserId) return;
- 
-    
-    
-    if (
-      (msg.sender_id === receiverId && msg.receiver_id === currentUserId) ||
-      (msg.sender_id === currentUserId && msg.receiver_id === receiverId)
-    ) {
-      setMessages(prev => {
-        const exists = prev.some(m => m.id === msg.id);
-        if (exists) return prev;
-        return [...prev, normalizeBackendMsg(msg)];
-      });
-    }
+  setMessages(prev => {
+    const exists = prev.some(m => m.id === normalized?.id);
+    console.log("exits",exists)
+    if (exists) return prev;
+    return [...prev, normalized];
   });
-const normalizeBackendMsg = backendMsg => ({
-  id: backendMsg.id,
-  senderId: backendMsg.sender_id,
-  receiverId: backendMsg.receiver_id,
-  message: backendMsg.message,
-  messageType: backendMsg.message_type,
-  attachments: backendMsg.attachment ? [backendMsg.attachment] : [],
-  isRead: !!backendMsg.is_read,
-  isDelivered: !!backendMsg.is_delivered,
-  chatId: backendMsg.chat_id,
-  createdAt: backendMsg.created_at,
-  updatedAt: backendMsg.updated_at,
-  pending: false,
 });
+
   channel.error(err => {
     console.log('❌ Channel error', err);
   });
